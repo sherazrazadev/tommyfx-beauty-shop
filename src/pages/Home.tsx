@@ -1,104 +1,77 @@
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, ShoppingBag, Truck, Award, RefreshCw, Instagram } from 'lucide-react';
 import ProductCard from '@/components/ui/ProductCard';
 import TestimonialCard from '@/components/ui/TestimonialCard';
 import { Button } from '@/components/ui/button';
-
-// Mock data
-const featuredProducts = [
-  {
-    id: '1',
-    name: 'Hydrating Facial Serum',
-    price: 34.99,
-    image: 'https://source.unsplash.com/oG8PIWBc3nE',
-    category: 'Skincare'
-  },
-  {
-    id: '2',
-    name: 'Matte Finish Foundation',
-    price: 29.99,
-    image: 'https://source.unsplash.com/UKWFNya-YHk',
-    category: 'Makeup'
-  },
-  {
-    id: '3',
-    name: 'Repairing Hair Mask',
-    price: 24.99,
-    image: 'https://source.unsplash.com/eeAZHchRdgA',
-    category: 'Hair'
-  },
-  {
-    id: '4',
-    name: 'Nourishing Body Oil',
-    price: 19.99,
-    image: 'https://source.unsplash.com/MhOcP0qEZLw',
-    category: 'Body'
-  },
-  {
-    id: '5',
-    name: 'Anti-Aging Night Cream',
-    price: 39.99,
-    image: 'https://source.unsplash.com/1Y_EeeOvzQQ',
-    category: 'Skincare'
-  },
-  {
-    id: '6',
-    name: 'Volumizing Mascara',
-    price: 17.99,
-    image: 'https://source.unsplash.com/fJTqyZMOh18',
-    category: 'Makeup'
-  },
-  {
-    id: '7',
-    name: 'Soothing Bath Bombs',
-    price: 14.99,
-    image: 'https://source.unsplash.com/ql3OpWIeYVw',
-    category: 'Bath'
-  },
-  {
-    id: '8',
-    name: 'Rose Perfume Spray',
-    price: 49.99,
-    image: 'https://source.unsplash.com/KLfD2eUNGEY',
-    category: 'Fragrance'
-  }
-];
-
-const testimonials = [
-  {
-    name: 'Emma Thompson',
-    rating: 5,
-    comment: 'I\'ve tried many beauty products before, but TommyFX\'s skincare line has completely transformed my skin! I\'ve never received so many compliments.',
-    date: 'May 15, 2025'
-  },
-  {
-    name: 'Sarah Johnson',
-    rating: 4,
-    comment: 'The foundation stays on all day and looks so natural. I\'m impressed with the quality for the price point.',
-    date: 'April 23, 2025'
-  },
-  {
-    name: 'Michael Chen',
-    rating: 5,
-    comment: 'I bought the hair products for my wife and she loves them! The customer service was also fantastic.',
-    date: 'June 1, 2025'
-  }
-];
-
-const instagramPosts = [
-  'https://source.unsplash.com/WMPJGp3FeGM',
-  'https://source.unsplash.com/81n9G9I_JMQ',
-  'https://source.unsplash.com/8HK5BxgKysA',
-  'https://source.unsplash.com/6YM5Mf5i_o8',
-  'https://source.unsplash.com/Hqk6JF_IgcE',
-  'https://source.unsplash.com/_H0fjILH5Vw'
-];
+import { supabase } from '@/integrations/supabase/client';
+import { useState } from 'react';
 
 const Home = () => {
+  const [featuredProducts, setFeaturedProducts] = useState<any[]>([]);
+  const [newArrivals, setNewArrivals] = useState<any[]>([]);
+  const [testimonials, setTestimonials] = useState([
+    {
+      name: 'Emma Thompson',
+      rating: 5,
+      comment: 'I\'ve tried many beauty products before, but TommyFX\'s skincare line has completely transformed my skin! I\'ve never received so many compliments.',
+      date: 'May 15, 2025'
+    },
+    {
+      name: 'Sarah Johnson',
+      rating: 4,
+      comment: 'The foundation stays on all day and looks so natural. I\'m impressed with the quality for the price point.',
+      date: 'April 23, 2025'
+    },
+    {
+      name: 'Michael Chen',
+      rating: 5,
+      comment: 'I bought the hair products for my wife and she loves them! The customer service was also fantastic.',
+      date: 'June 1, 2025'
+    }
+  ]);
+
+  const instagramPosts = [
+    'https://source.unsplash.com/WMPJGp3FeGM',
+    'https://source.unsplash.com/81n9G9I_JMQ',
+    'https://source.unsplash.com/8HK5BxgKysA',
+    'https://source.unsplash.com/6YM5Mf5i_o8',
+    'https://source.unsplash.com/Hqk6JF_IgcE',
+    'https://source.unsplash.com/_H0fjILH5Vw'
+  ];
+
   const [animatedElements, setAnimatedElements] = useState<Element[]>([]);
   const observerRef = useRef<IntersectionObserver | null>(null);
+
+  useEffect(() => {
+    // Fetch products from Supabase
+    const fetchProducts = async () => {
+      try {
+        // Fetch all products
+        const { data, error } = await supabase
+          .from('products')
+          .select('*');
+        
+        if (error) {
+          throw error;
+        }
+        
+        if (data && data.length > 0) {
+          // Split products into featured and new arrivals
+          const featured = data.slice(0, 4);
+          const newOnes = data.slice(4, 8);
+          
+          setFeaturedProducts(featured);
+          setNewArrivals(newOnes.length > 0 ? newOnes : featured); // Use featured as fallback
+        }
+      } catch (error) {
+        console.error('Error fetching products:', error);
+      }
+    };
+    
+    fetchProducts();
+  }, []);
 
   useEffect(() => {
     // Set up intersection observer for animations
@@ -130,7 +103,7 @@ const Home = () => {
   }, [animatedElements.length]);
 
   return (
-    <div>
+    <div className="bg-white">
       {/* Hero Section */}
       <section className="bg-gradient-to-r from-gray-100 to-gray-200 py-20 md:py-32">
         <div className="container-custom">
@@ -144,8 +117,8 @@ const Home = () => {
                 Premium beauty products crafted with natural ingredients to enhance your unique beauty.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                <Button size="lg" className="btn-primary text-lg">
-                  Shop Now
+                <Button size="lg" className="btn-primary text-lg" asChild>
+                  <Link to="/categories">Shop Now</Link>
                 </Button>
                 <Button variant="outline" size="lg" className="btn-outline text-lg">
                   Learn More
@@ -170,7 +143,7 @@ const Home = () => {
       <section className="py-16 bg-white">
         <div className="container-custom">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {/* Feature 1 */}
+            {/* Feature boxes */}
             <div className="flex items-center p-6 bg-gray-50 rounded-lg js-animate">
               <ShoppingBag className="text-tommyfx-blue w-12 h-12 mr-4" />
               <div>
@@ -179,7 +152,6 @@ const Home = () => {
               </div>
             </div>
             
-            {/* Feature 2 */}
             <div className="flex items-center p-6 bg-gray-50 rounded-lg js-animate">
               <RefreshCw className="text-tommyfx-blue w-12 h-12 mr-4" />
               <div>
@@ -188,7 +160,6 @@ const Home = () => {
               </div>
             </div>
             
-            {/* Feature 3 */}
             <div className="flex items-center p-6 bg-gray-50 rounded-lg js-animate">
               <Award className="text-tommyfx-blue w-12 h-12 mr-4" />
               <div>
@@ -197,7 +168,6 @@ const Home = () => {
               </div>
             </div>
             
-            {/* Feature 4 */}
             <div className="flex items-center p-6 bg-gray-50 rounded-lg js-animate">
               <Truck className="text-tommyfx-blue w-12 h-12 mr-4" />
               <div>
@@ -220,13 +190,13 @@ const Home = () => {
           </div>
           
           <div className="product-grid">
-            {featuredProducts.slice(0, 4).map((product) => (
+            {featuredProducts.map((product) => (
               <ProductCard
                 key={product.id}
                 id={product.id}
                 name={product.name}
                 price={product.price}
-                image={product.image}
+                image={product.image_url}
                 category={product.category}
               />
             ))}
@@ -263,13 +233,13 @@ const Home = () => {
           </div>
           
           <div className="product-grid">
-            {featuredProducts.slice(4, 8).map((product) => (
+            {newArrivals.map((product) => (
               <ProductCard
                 key={product.id}
                 id={product.id}
                 name={product.name}
                 price={product.price}
-                image={product.image}
+                image={product.image_url}
                 category={product.category}
               />
             ))}

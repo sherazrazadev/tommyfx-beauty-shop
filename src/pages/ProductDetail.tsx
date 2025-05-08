@@ -86,18 +86,26 @@ const ProductDetail = () => {
       setLoading(true);
       
       try {
+        console.log("Fetching product with ID:", id);
         const { data, error } = await supabase
           .from('products')
           .select('*')
           .eq('id', id)
           .single();
         
-        if (error) throw error;
+        if (error) {
+          console.error('Error fetching product:', error);
+          throw error;
+        }
         
         if (data) {
+          console.log("Product data:", data);
+          // Set up images array - use the main image 4 times for demo purposes
+          const images = Array(4).fill(data.image_url || 'https://source.unsplash.com/oG8PIWBc3nE');
+          
           setProduct({
             ...data,
-            images: [data.image_url, data.image_url, data.image_url, data.image_url],
+            images,
             details: {
               ingredients: 'Aqua, Glycerin, Sodium Hyaluronate, Tocopherol, Panthenol, Niacinamide, Allantoin, Aloe Barbadensis Leaf Juice, Phenoxyethanol, Ethylhexylglycerin',
               howToUse: 'Apply 2-3 drops to clean, dry skin morning and night. Gently press into skin, following with moisturizer.',
@@ -105,6 +113,8 @@ const ProductDetail = () => {
             },
             reviews
           });
+        } else {
+          console.log("No product found with ID:", id);
         }
       } catch (error) {
         console.error('Error fetching product:', error);

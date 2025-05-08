@@ -24,47 +24,45 @@ import NotFound from "./pages/NotFound";
 import { AuthProvider } from "./hooks/useAuth";
 import { CartProvider } from "./hooks/useCart";
 
-// Create a new QueryClient instance outside of the component
+// Create a new QueryClient instance
 const queryClient = new QueryClient();
 
 const App: React.FC = () => {
   return (
-    <React.StrictMode>
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <AuthProvider>
-            <CartProvider>
-              <BrowserRouter>
-                <Routes>
-                  {/* User Routes */}
-                  <Route path="/" element={<Layout><Home /></Layout>} />
-                  <Route path="/categories" element={<Layout><Categories /></Layout>} />
-                  <Route path="/product/:id" element={<Layout><ProductDetail /></Layout>} />
-                  <Route path="/cart" element={<Layout><Cart /></Layout>} />
-                  <Route path="/checkout" element={<Layout><Checkout /></Layout>} />
-                  <Route path="/login" element={<Layout><Login /></Layout>} />
-                  <Route path="/signup" element={<Layout><Signup /></Layout>} />
-                  <Route path="/forgot-password" element={<Layout><ForgotPassword /></Layout>} />
-                  <Route path="/profile" element={<Layout><Profile /></Layout>} />
-                  <Route path="/about" element={<Layout><About /></Layout>} />
-                  <Route path="/contact" element={<Layout><Contact /></Layout>} />
-                  
-                  {/* Admin Routes */}
-                  <Route path="/admin" element={<Dashboard />} />
-                  <Route path="/admin/orders" element={<Orders />} />
-                  <Route path="/admin/products" element={<Products />} />
-                  
-                  {/* Catch-all Route */}
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </BrowserRouter>
-            </CartProvider>
-          </AuthProvider>
-        </TooltipProvider>
-      </QueryClientProvider>
-    </React.StrictMode>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <AuthProvider>
+          <CartProvider>
+            <BrowserRouter>
+              <Routes>
+                {/* User Routes */}
+                <Route path="/" element={<Layout><Home /></Layout>} />
+                <Route path="/categories" element={<Layout><Categories /></Layout>} />
+                <Route path="/product/:id" element={<Layout><ProductDetail /></Layout>} />
+                <Route path="/cart" element={<Layout><Cart /></Layout>} />
+                <Route path="/checkout" element={<Layout><Checkout /></Layout>} />
+                <Route path="/login" element={<Layout><Login /></Layout>} />
+                <Route path="/signup" element={<Layout><Signup /></Layout>} />
+                <Route path="/forgot-password" element={<Layout><ForgotPassword /></Layout>} />
+                <Route path="/profile" element={<Layout><Profile /></Layout>} />
+                <Route path="/about" element={<Layout><About /></Layout>} />
+                <Route path="/contact" element={<Layout><Contact /></Layout>} />
+                
+                {/* Admin Routes */}
+                <Route path="/admin" element={<Dashboard />} />
+                <Route path="/admin/orders" element={<Orders />} />
+                <Route path="/admin/products" element={<Products />} />
+                
+                {/* Catch-all Route */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </CartProvider>
+        </AuthProvider>
+      </TooltipProvider>
+    </QueryClientProvider>
   );
 };
 

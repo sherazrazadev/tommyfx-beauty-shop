@@ -2,6 +2,7 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Session, User } from '@supabase/supabase-js';
+import { toast } from '@/components/ui/use-toast';
 
 type AuthContextType = {
   user: User | null;
@@ -42,8 +43,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signIn = async (email: string, password: string) => {
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) return { error };
+      
+      if (error) {
+        toast({
+          title: "Login failed",
+          description: error.message,
+          variant: "destructive"
+        });
+        return { error };
+      }
+      
+      toast({
+        title: "Login successful",
+        description: "Welcome back!"
+      });
     } catch (error) {
+      toast({
+        title: "Login failed",
+        description: "An unexpected error occurred",
+        variant: "destructive"
+      });
       return { error };
     }
   };
@@ -51,8 +70,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signUp = async (email: string, password: string) => {
     try {
       const { error } = await supabase.auth.signUp({ email, password });
-      if (error) return { error };
+      
+      if (error) {
+        toast({
+          title: "Signup failed",
+          description: error.message,
+          variant: "destructive"
+        });
+        return { error };
+      }
+      
+      toast({
+        title: "Signup successful",
+        description: "Welcome to TommyFX Beauty!"
+      });
     } catch (error) {
+      toast({
+        title: "Signup failed",
+        description: "An unexpected error occurred",
+        variant: "destructive"
+      });
       return { error };
     }
   };
