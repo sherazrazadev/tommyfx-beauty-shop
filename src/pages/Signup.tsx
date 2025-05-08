@@ -1,13 +1,63 @@
 
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from '@/components/ui/use-toast';
 
 const Signup = () => {
-  const handleSubmit = (e: React.FormEvent) => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const { signUp, user } = useAuth();
+  const navigate = useNavigate();
+
+  // If user is already logged in, redirect to home page
+  useEffect(() => {
+    if (user) {
+      navigate('/');
+    }
+  }, [user, navigate]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle signup logic
-    console.log('Signup submitted');
+    
+    if (password !== confirmPassword) {
+      toast({
+        title: "Passwords don't match",
+        description: "Please make sure both passwords match",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    setIsLoading(true);
+    
+    try {
+      const { error } = await signUp(email, password) || {};
+      if (error) {
+        toast({
+          title: "Signup failed",
+          description: error.message,
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "Signup successful",
+          description: "Please check your email to verify your account",
+        });
+        navigate('/login');
+      }
+    } catch (err: any) {
+      toast({
+        title: "Signup failed",
+        description: err.message || "An error occurred during signup",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -16,19 +66,7 @@ const Signup = () => {
         <div className="max-w-md mx-auto bg-white p-8 rounded-lg shadow-sm">
           <h1 className="text-2xl font-bold mb-6 text-center">Create an Account</h1>
           
-          <form onSubmit={handleSubmit}>
-            <div className="mb-4">
-              <label htmlFor="name" className="block mb-2 font-medium">
-                Full Name
-              </label>
-              <input
-                type="text"
-                id="name"
-                className="w-full p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-tommyfx-blue"
-                required
-              />
-            </div>
-            
+          <form onSubmit={handleSubmit}>            
             <div className="mb-4">
               <label htmlFor="email" className="block mb-2 font-medium">
                 Email Address
@@ -36,6 +74,8 @@ const Signup = () => {
               <input
                 type="email"
                 id="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 className="w-full p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-tommyfx-blue"
                 required
               />
@@ -48,6 +88,8 @@ const Signup = () => {
               <input
                 type="password"
                 id="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 className="w-full p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-tommyfx-blue"
                 required
               />
@@ -60,6 +102,8 @@ const Signup = () => {
               <input
                 type="password"
                 id="confirmPassword"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
                 className="w-full p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-tommyfx-blue"
                 required
               />
@@ -81,8 +125,12 @@ const Signup = () => {
               </label>
             </div>
             
-            <Button type="submit" className="btn-primary w-full mb-4">
-              Create Account
+            <Button 
+              type="submit" 
+              className="btn-primary w-full mb-4"
+              disabled={isLoading}
+            >
+              {isLoading ? 'Creating Account...' : 'Create Account'}
             </Button>
             
             <p className="text-center">

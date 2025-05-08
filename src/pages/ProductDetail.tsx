@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { 
   ChevronRight, 
@@ -16,49 +16,30 @@ import {
 import { Button } from '@/components/ui/button';
 import ProductCard from '@/components/ui/ProductCard';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { toast } from '@/components/ui/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useCart } from '@/hooks/useCart';
 
-// Mock data
-const products = [
+// Mock data for reviews and related products - will be replaced later
+const reviews = [
   {
-    id: '1',
-    name: 'Hydrating Facial Serum',
-    price: 34.99,
-    image: 'https://source.unsplash.com/oG8PIWBc3nE',
-    category: 'Skincare',
-    description: 'A deeply hydrating facial serum that replenishes moisture and improves skin elasticity. Formulated with hyaluronic acid and vitamin E to nourish and protect your skin.',
-    details: {
-      ingredients: 'Aqua, Glycerin, Sodium Hyaluronate, Tocopherol, Panthenol, Niacinamide, Allantoin, Aloe Barbadensis Leaf Juice, Phenoxyethanol, Ethylhexylglycerin',
-      howToUse: 'Apply 2-3 drops to clean, dry skin morning and night. Gently press into skin, following with moisturizer.',
-      benefits: ['Deep hydration', 'Improves elasticity', 'Reduces fine lines', 'Brightens complexion']
-    },
-    images: [
-      'https://source.unsplash.com/oG8PIWBc3nE',
-      'https://source.unsplash.com/4rDCa5hBlCs',
-      'https://source.unsplash.com/mEZ3PoFGs_k',
-      'https://source.unsplash.com/JaXs8Tk5Iww'
-    ],
-    reviews: [
-      {
-        name: 'Sophie L.',
-        rating: 5,
-        date: 'May 12, 2025',
-        comment: 'This serum has completely transformed my dry skin. I've been using it for a month and my skin looks so much more plump and hydrated.'
-      },
-      {
-        name: 'Michael R.',
-        rating: 4,
-        date: 'April 30, 2025',
-        comment: 'Bought this for my wife and she loves it. Says it absorbs quickly and doesn't leave a sticky residue like other serums.'
-      },
-      {
-        name: 'Alicia T.',
-        rating: 5,
-        date: 'April 22, 2025',
-        comment: 'My new holy grail product! Feels luxurious and my skin has never looked better. Will definitely repurchase.'
-      }
-    ]
+    name: 'Sophie L.',
+    rating: 5,
+    date: 'May 12, 2025',
+    comment: "This serum has completely transformed my dry skin. I have been using it for a month and my skin looks so much more plump and hydrated."
   },
-  // Add more detailed products here...
+  {
+    name: 'Michael R.',
+    rating: 4,
+    date: 'April 30, 2025',
+    comment: "Bought this for my wife and she loves it. Says it absorbs quickly and doesn't leave a sticky residue like other serums."
+  },
+  {
+    name: 'Alicia T.',
+    rating: 5,
+    date: 'April 22, 2025',
+    comment: "My new holy grail product! Feels luxurious and my skin has never looked better. Will definitely repurchase."
+  }
 ];
 
 const relatedProducts = [
@@ -96,16 +77,93 @@ const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
   const [quantity, setQuantity] = useState(1);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [product, setProduct] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const { addToCart } = useCart();
   
-  // Find product by id
-  const product = products.find(p => p.id === id) || products[0];
+  useEffect(() => {
+    const fetchProduct = async () => {
+      setLoading(true);
+      
+      try {
+        const { data, error } = await supabase
+          .from('products')
+          .select('*')
+          .eq('id', id)
+          .single();
+        
+        if (error) throw error;
+        
+        if (data) {
+          setProduct({
+            ...data,
+            images: [data.image_url, data.image_url, data.image_url, data.image_url],
+            details: {
+              ingredients: 'Aqua, Glycerin, Sodium Hyaluronate, Tocopherol, Panthenol, Niacinamide, Allantoin, Aloe Barbadensis Leaf Juice, Phenoxyethanol, Ethylhexylglycerin',
+              howToUse: 'Apply 2-3 drops to clean, dry skin morning and night. Gently press into skin, following with moisturizer.',
+              benefits: ['Deep hydration', 'Improves elasticity', 'Reduces fine lines', 'Brightens complexion']
+            },
+            reviews
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching product:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchProduct();
+  }, [id]);
 
   const incrementQuantity = () => setQuantity(prev => prev + 1);
   const decrementQuantity = () => setQuantity(prev => (prev > 1 ? prev - 1 : 1));
 
+  const handleAddToCart = () => {
+    if (product) {
+      addToCart({
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        image: product.image_url,
+        quantity
+      });
+      toast({
+        title: "Added to cart",
+        description: `${quantity} x ${product.name} added to your cart`,
+      });
+    }
+  };
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="container-custom py-12">
+        <div className="flex justify-center items-center h-96">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-tommyfx-blue"></div>
+        </div>
+      </div>
+    );
+  }
+  
+  // Show message if product not found
+  if (!product) {
+    return (
+      <div className="container-custom py-12">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-4">Product Not Found</h2>
+          <p className="mb-6">The product you are looking for could not be found.</p>
+          <Link to="/categories">
+            <Button>Browse Products</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   // Calculate average rating
   const averageRating = 
-    product.reviews.reduce((sum, review) => sum + review.rating, 0) / product.reviews.length;
+    product.reviews.reduce((sum: number, review: any) => sum + review.rating, 0) / product.reviews.length;
 
   return (
     <div>
@@ -143,7 +201,7 @@ const ProductDetail = () => {
               </div>
               
               <div className="grid grid-cols-4 gap-3">
-                {product.images.map((image, index) => (
+                {product.images.map((image: string, index: number) => (
                   <button
                     key={index}
                     className={`aspect-square rounded-md overflow-hidden border-2 ${
@@ -211,7 +269,10 @@ const ProductDetail = () => {
                 </div>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <Button className="btn-primary flex items-center justify-center">
+                  <Button 
+                    className="btn-primary flex items-center justify-center"
+                    onClick={handleAddToCart}
+                  >
                     <ShoppingCart size={18} className="mr-2" /> Add to Cart
                   </Button>
                   <Button variant="outline" className="btn-outline flex items-center justify-center">
@@ -263,7 +324,7 @@ const ProductDetail = () => {
                 <p className="mb-4">{product.description}</p>
                 <h4 className="text-lg font-medium mb-3">Benefits</h4>
                 <ul className="list-disc pl-5 space-y-2">
-                  {product.details.benefits.map((benefit, index) => (
+                  {product.details.benefits.map((benefit: string, index: number) => (
                     <li key={index}>{benefit}</li>
                   ))}
                 </ul>
@@ -292,7 +353,7 @@ const ProductDetail = () => {
                 </div>
                 
                 <div className="space-y-6">
-                  {product.reviews.map((review, index) => (
+                  {product.reviews.map((review: any, index: number) => (
                     <div key={index} className="border-b pb-6">
                       <div className="flex justify-between mb-2">
                         <h4 className="font-medium">{review.name}</h4>
