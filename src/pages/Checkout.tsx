@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -127,8 +127,8 @@ const Checkout = () => {
     }
   };
   
-  // Load user profile data when component mounts
-  useState(() => {
+  // Fetch user profile data when component mounts
+  useEffect(() => {
     const fetchUserProfile = async () => {
       if (user) {
         const { data } = await supabase
@@ -153,7 +153,7 @@ const Checkout = () => {
     };
     
     fetchUserProfile();
-  });
+  }, [user]);
   
   if (cart.length === 0) {
     navigate('/cart');
