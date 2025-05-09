@@ -18,10 +18,8 @@ type OrderType = {
   shipping_country: string;
   created_at: string;
   payment_method: string;
-  profileData?: {
-    email: string;
-    full_name: string;
-  };
+  customer_email?: string;
+  customer_name?: string;
 };
 
 const Orders: React.FC = () => {
@@ -38,9 +36,7 @@ const Orders: React.FC = () => {
     const fetchOrders = async () => {
       setLoading(true);
       try {
-        let query = supabase
-          .from('orders')
-          .select('*, profiles!inner(email, full_name)');
+        let query = supabase.from('orders').select('*');
 
         // Apply status filter if not 'all'
         if (filter !== 'all') {
@@ -55,20 +51,35 @@ const Orders: React.FC = () => {
         // Apply sorting
         query = query.order(sort.field, { ascending: sort.direction === 'asc' });
 
-        const { data, error } = await query;
+        const { data: orderData, error: orderError } = await query;
 
-        if (error) throw error;
+        if (orderError) throw orderError;
 
-        if (data) {
-          // Map the profiles data to the order
-          const ordersWithProfile = data.map(order => ({
-            ...order,
-            profileData: {
-              email: order.profiles.email,
-              full_name: order.profiles.full_name
-            }
-          }));
-          setOrders(ordersWithProfile);
+        // Get user profile data in a separate query
+        if (orderData && orderData.length > 0) {
+          const userIds = orderData.map(order => order.user_id).filter(Boolean);
+          
+          // Fetch profiles for these users
+          const { data: profilesData, error: profilesError } = await supabase
+            .from('profiles')
+            .select('id, email, full_name')
+            .in('id', userIds);
+          
+          if (profilesError) throw profilesError;
+          
+          // Map profile data to orders
+          const ordersWithProfiles = orderData.map(order => {
+            const userProfile = profilesData?.find(profile => profile.id === order.user_id);
+            return {
+              ...order,
+              customer_email: userProfile?.email || 'Unknown',
+              customer_name: userProfile?.full_name || 'Unknown Customer'
+            };
+          });
+          
+          setOrders(ordersWithProfiles);
+        } else {
+          setOrders([]);
         }
       } catch (error) {
         console.error('Error fetching orders:', error);
@@ -176,9 +187,9 @@ const Orders: React.FC = () => {
                       Order ID {getSortIcon('id')}
                     </div>
                   </th>
-                  <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('profiles.full_name')}>
+                  <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('customer_name')}>
                     <div className="flex items-center">
-                      Customer {getSortIcon('profiles.full_name')}
+                      Customer {getSortIcon('customer_name')}
                     </div>
                   </th>
                   <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('created_at')}>
@@ -209,8 +220,8 @@ const Orders: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
-                        <div className="font-medium">{order.profileData?.full_name || 'Unknown'}</div>
-                        <div className="text-sm text-gray-500">{order.profileData?.email || ''}</div>
+                        <div className="font-medium">{order.customer_name || 'Unknown'}</div>
+                        <div className="text-sm text-gray-500">{order.customer_email || ''}</div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">

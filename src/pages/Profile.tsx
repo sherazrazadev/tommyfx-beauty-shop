@@ -145,14 +145,21 @@ const Profile = () => {
     setLoading(true);
     
     try {
-      // Store feedback in Supabase
-      const { error } = await supabase
-        .from('feedback')
-        .insert({
-          user_id: user?.id,
-          rating: feedbackData.rating,
-          comment: feedbackData.comment
+      if (!user) {
+        toast({
+          title: "Not logged in",
+          description: "You need to be logged in to submit feedback",
+          variant: "destructive"
         });
+        return;
+      }
+      
+      // Fix: Use the correct data structure for feedback table
+      const { error } = await supabase.from('feedback').insert({
+        user_id: user.id,
+        rating: feedbackData.rating,
+        comment: feedbackData.comment
+      });
       
       if (error) throw error;
       
@@ -197,7 +204,7 @@ const Profile = () => {
 
   return (
     <div className="bg-gray-50 py-12 min-h-[calc(100vh-5rem)]">
-      <div className="container-custom">
+      <div className="container-custom max-w-7xl mx-auto px-4">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Sidebar */}
           <div className="md:col-span-1">

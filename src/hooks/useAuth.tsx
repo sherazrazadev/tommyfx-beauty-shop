@@ -57,6 +57,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         title: "Login successful",
         description: "Welcome back!"
       });
+      
+      // Return undefined when there's no error
+      return undefined;
     } catch (error) {
       toast({
         title: "Login failed",
@@ -84,6 +87,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         title: "Signup successful",
         description: "Welcome to TommyFX Beauty!"
       });
+      
+      // Return undefined when there's no error
+      return undefined;
     } catch (error) {
       toast({
         title: "Signup failed",
@@ -95,7 +101,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error('Error signing out:', error);
+      throw error;
+    }
   };
 
   return (
