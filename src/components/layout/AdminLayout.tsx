@@ -1,6 +1,6 @@
 
-import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   ShoppingBag, 
@@ -16,6 +16,8 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { toast } from '@/components/ui/use-toast';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -23,7 +25,21 @@ interface AdminLayoutProps {
 
 const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { isAdmin, user, loading, signOut } = useAuth();
+  
+  useEffect(() => {
+    // Redirect if not admin
+    if (!loading && (!user || !isAdmin)) {
+      toast({
+        title: "Access denied",
+        description: "You need to be an admin to access this page",
+        variant: "destructive"
+      });
+      navigate('/login');
+    }
+  }, [isAdmin, user, loading, navigate]);
   
   const navigation = [
     {
@@ -45,6 +61,12 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
       current: location.pathname === '/admin/products'
     },
     {
+      name: 'Feedback',
+      href: '/admin/feedback',
+      icon: MessageSquare,
+      current: location.pathname === '/admin/feedback'
+    },
+    {
       name: 'Customers',
       href: '/admin/customers',
       icon: Users,
@@ -57,18 +79,33 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
       current: location.pathname === '/admin/analytics'
     },
     {
-      name: 'Feedback',
-      href: '/admin/feedback',
-      icon: MessageSquare,
-      current: location.pathname === '/admin/feedback'
-    },
-    {
       name: 'Settings',
       href: '/admin/settings',
       icon: Settings,
       current: location.pathname === '/admin/settings'
     }
   ];
+  
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      navigate('/login');
+    } catch (error) {
+      console.error('Error logging out:', error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-tommyfx-blue"></div>
+      </div>
+    );
+  }
+  
+  if (!isAdmin) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
@@ -131,13 +168,13 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
           
           {/* Sidebar footer */}
           <div className="p-4 border-t">
-            <Link 
-              to="/logout" 
-              className="flex items-center text-gray-700 hover:text-tommyfx-blue"
+            <button 
+              onClick={handleLogout}
+              className="flex items-center text-gray-700 hover:text-tommyfx-blue w-full"
             >
               <LogOut size={18} className="mr-3 text-gray-500" />
               <span>Logout</span>
-            </Link>
+            </button>
           </div>
         </div>
       </aside>
@@ -170,7 +207,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
                 </div>
                 <div className="ml-3 hidden md:block">
                   <p className="font-medium">Admin User</p>
-                  <p className="text-xs text-gray-500">admin@tommyfx.com</p>
+                  <p className="text-xs text-gray-500">{user?.email}</p>
                 </div>
               </div>
             </div>

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Settings, User, LogOut } from 'lucide-react';
+import { Settings, User, LogOut, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,7 +9,7 @@ import { toast } from '@/components/ui/use-toast';
 
 const Profile = () => {
   const navigate = useNavigate();
-  const { user, signOut } = useAuth();
+  const { user, signOut, isAdmin } = useAuth();
   
   const [profileData, setProfileData] = useState({
     full_name: '',
@@ -19,7 +19,8 @@ const Profile = () => {
     city: '',
     state: '',
     zip: '',
-    country: 'United States'
+    country: 'United States',
+    role: 'user'
   });
   
   const [loading, setLoading] = useState(false);
@@ -27,6 +28,8 @@ const Profile = () => {
     rating: 5,
     comment: ''
   });
+  
+  const [submittedFeedback, setSubmittedFeedback] = useState<any[]>([]);
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -49,9 +52,21 @@ const Profile = () => {
               city: data.city || '',
               state: data.state || '',
               zip: data.zip || '',
-              country: data.country || 'United States'
+              country: data.country || 'United States',
+              role: data.role || 'user'
             });
           }
+          
+          // Fetch user's submitted feedback
+          const { data: feedbackData, error: feedbackError } = await supabase
+            .from('feedback')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false });
+            
+          if (feedbackError) throw feedbackError;
+          
+          setSubmittedFeedback(feedbackData || []);
         } catch (error) {
           console.error('Error fetching profile:', error);
         }
@@ -109,6 +124,7 @@ const Profile = () => {
           state: profileData.state,
           zip: profileData.zip,
           country: profileData.country
+          // Role cannot be changed by the user
         })
         .eq('id', user.id);
       
@@ -154,19 +170,24 @@ const Profile = () => {
         return;
       }
       
-      // Fix: Use the correct data structure for feedback table
-      const { error } = await supabase.from('feedback').insert({
+      const { data, error } = await supabase.from('feedback').insert({
         user_id: user.id,
         rating: feedbackData.rating,
-        comment: feedbackData.comment
-      });
+        comment: feedbackData.comment,
+        approved: false // All feedback needs admin approval
+      }).select();
       
       if (error) throw error;
       
       toast({
         title: "Feedback sent",
-        description: "Thank you for your feedback!"
+        description: "Thank you for your feedback! It will be visible after admin approval."
       });
+      
+      // Add submitted feedback to the list
+      if (data && data[0]) {
+        setSubmittedFeedback([data[0], ...submittedFeedback]);
+      }
       
       setFeedbackData({
         rating: 5,
@@ -210,12 +231,17 @@ const Profile = () => {
           <div className="md:col-span-1">
             <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
               <div className="flex items-center mb-4">
-                <div className="w-14 h-14 rounded-full bg-gray-200 flex items-center justify-center mr-3 text-gray-500">
+                <div className="w-14 h-14 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 flex items-center justify-center mr-3 text-white font-bold">
                   {profileData.full_name ? profileData.full_name.charAt(0) : user.email?.charAt(0)}
                 </div>
                 <div>
                   <h2 className="font-bold">{profileData.full_name || 'User'}</h2>
                   <p className="text-sm text-gray-500">{profileData.email}</p>
+                  {isAdmin && (
+                    <span className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded-full mt-1">
+                      Admin
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -233,9 +259,18 @@ const Profile = () => {
                   href="#feedback-section" 
                   className="flex items-center p-3 rounded-md hover:bg-gray-50 text-gray-700"
                 >
-                  <Settings size={18} className="mr-3 text-tommyfx-blue" />
+                  <MessageSquare size={18} className="mr-3 text-tommyfx-blue" />
                   <span>Feedback</span>
                 </a>
+                {isAdmin && (
+                  <a 
+                    href="/admin" 
+                    className="flex items-center p-3 rounded-md hover:bg-gray-50 text-gray-700"
+                  >
+                    <Settings size={18} className="mr-3 text-tommyfx-blue" />
+                    <span>Admin Dashboard</span>
+                  </a>
+                )}
                 <button 
                   onClick={handleLogout}
                   className="flex w-full items-center p-3 rounded-md hover:bg-gray-50 text-gray-700 mt-4"
@@ -382,7 +417,7 @@ const Profile = () => {
             </div>
             
             {/* Feedback Section */}
-            <div id="feedback-section" className="bg-white rounded-lg shadow-sm p-6">
+            <div id="feedback-section" className="bg-white rounded-lg shadow-sm p-6 mb-8">
               <h3 className="text-xl font-bold mb-6">Submit Feedback</h3>
               
               <form onSubmit={handleFeedbackSubmit}>
@@ -396,7 +431,7 @@ const Profile = () => {
                         key={star}
                         type="button"
                         onClick={() => handleRatingChange(star)}
-                        className={`w-10 h-10 flex items-center justify-center rounded-full ${
+                        className={`w-10 h-10 flex items-center justify-center rounded-full transition-colors ${
                           feedbackData.rating >= star ? 'bg-tommyfx-blue text-white' : 'bg-gray-100 text-gray-600'
                         }`}
                       >
@@ -427,6 +462,36 @@ const Profile = () => {
                 </Button>
               </form>
             </div>
+            
+            {/* User's Submitted Feedback */}
+            {submittedFeedback.length > 0 && (
+              <div className="bg-white rounded-lg shadow-sm p-6">
+                <h3 className="text-xl font-bold mb-6">Your Submitted Feedback</h3>
+                
+                <div className="space-y-4">
+                  {submittedFeedback.map(feedback => (
+                    <div key={feedback.id} className="border rounded-lg p-4">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="text-yellow-500 mb-2">
+                            {'★'.repeat(feedback.rating)}{'☆'.repeat(5 - feedback.rating)}
+                          </div>
+                          <p className="italic">"{feedback.comment}"</p>
+                        </div>
+                        <div className="flex flex-col items-end">
+                          <span className="text-sm text-gray-500">
+                            {new Date(feedback.created_at).toLocaleDateString()}
+                          </span>
+                          <span className={`text-xs ${feedback.approved ? 'text-green-600' : 'text-orange-500'} mt-1`}>
+                            {feedback.approved ? 'Approved' : 'Pending approval'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

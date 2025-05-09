@@ -20,6 +20,7 @@ import Contact from "./pages/Contact";
 import Dashboard from "./pages/admin/Dashboard";
 import Orders from "./pages/admin/Orders";
 import Products from "./pages/admin/Products";
+import Feedback from "./pages/admin/Feedback";
 import NotFound from "./pages/NotFound";
 import { AuthProvider } from "./hooks/useAuth";
 import { CartProvider } from "./hooks/useCart";
@@ -62,6 +63,7 @@ const App: React.FC = () => {
                   <Route path="/admin" element={<Dashboard />} />
                   <Route path="/admin/orders" element={<Orders />} />
                   <Route path="/admin/products" element={<Products />} />
+                  <Route path="/admin/feedback" element={<Feedback />} />
                   
                   {/* Catch-all Route */}
                   <Route path="*" element={<NotFound />} />

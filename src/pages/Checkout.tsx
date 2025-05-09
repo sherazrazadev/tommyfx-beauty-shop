@@ -155,6 +155,18 @@ const Checkout = () => {
     fetchUserProfile();
   }, [user]);
   
+  if (!user) {
+    // If not logged in, redirect to login page
+    useEffect(() => {
+      toast({
+        title: "Login required",
+        description: "Please log in to continue with checkout",
+      });
+      navigate('/login', { state: { returnUrl: '/checkout' } });
+    }, []);
+    return null;
+  }
+  
   if (cart.length === 0) {
     navigate('/cart');
     return null;
@@ -295,7 +307,8 @@ const Checkout = () => {
                     <option value="United States">United States</option>
                     <option value="Canada">Canada</option>
                     <option value="United Kingdom">United Kingdom</option>
-                    {/* Add more countries as needed */}
+                    <option value="Australia">Australia</option>
+                    <option value="Germany">Germany</option>
                   </select>
                 </div>
                 
