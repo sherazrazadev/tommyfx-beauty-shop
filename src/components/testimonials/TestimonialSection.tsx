@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import TestimonialCard from '@/components/ui/TestimonialCard';
 import { supabase } from '@/integrations/supabase/client';
@@ -19,8 +19,12 @@ type Testimonial = {
 const TestimonialSection = () => {
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const itemsPerPage = 3; // Show 3 testimonials at a time on desktop
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [scrollPosition, setScrollPosition] = useState(0);
+  const [maxScroll, setMaxScroll] = useState(0);
+  
+  // Amount to scroll in each direction
+  const scrollAmount = 300;
 
   useEffect(() => {
     const fetchTestimonials = async () => {
@@ -67,12 +71,44 @@ const TestimonialSection = () => {
     fetchTestimonials();
   }, []);
   
-  const handlePrevious = () => {
-    setCurrentIndex(prev => Math.max(0, prev - 1));
+  useEffect(() => {
+    // Calculate max scroll position when testimonials change or on resize
+    const updateMaxScroll = () => {
+      if (scrollContainerRef.current) {
+        const containerWidth = scrollContainerRef.current.scrollWidth;
+        const visibleWidth = scrollContainerRef.current.clientWidth;
+        setMaxScroll(containerWidth - visibleWidth);
+      }
+    };
+    
+    updateMaxScroll();
+    
+    // Update max scroll on window resize
+    window.addEventListener('resize', updateMaxScroll);
+    return () => window.removeEventListener('resize', updateMaxScroll);
+  }, [testimonials]);
+  
+  const scrollLeft = () => {
+    if (scrollContainerRef.current) {
+      const newPosition = Math.max(scrollPosition - scrollAmount, 0);
+      scrollContainerRef.current.scrollTo({ left: newPosition, behavior: 'smooth' });
+      setScrollPosition(newPosition);
+    }
   };
   
-  const handleNext = () => {
-    setCurrentIndex(prev => Math.min(testimonials.length - itemsPerPage, prev + 1));
+  const scrollRight = () => {
+    if (scrollContainerRef.current) {
+      const newPosition = Math.min(scrollPosition + scrollAmount, maxScroll);
+      scrollContainerRef.current.scrollTo({ left: newPosition, behavior: 'smooth' });
+      setScrollPosition(newPosition);
+    }
+  };
+  
+  // Handle scroll event to update scroll position state
+  const handleScroll = () => {
+    if (scrollContainerRef.current) {
+      setScrollPosition(scrollContainerRef.current.scrollLeft);
+    }
   };
   
   if (loading) {
@@ -92,8 +128,6 @@ const TestimonialSection = () => {
     return null; // Don't show section if no testimonials
   }
 
-  const visibleTestimonials = testimonials.slice(currentIndex, currentIndex + itemsPerPage);
-
   return (
     <div className="py-16 bg-gradient-to-b from-white to-gray-50">
       <div className="container mx-auto px-4">
@@ -106,44 +140,32 @@ const TestimonialSection = () => {
         
         <div className="relative">
           {/* Navigation arrows */}
-          {testimonials.length > itemsPerPage && (
-            <>
-              <button 
-                onClick={handlePrevious} 
-                disabled={currentIndex === 0} 
-                className={`absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white p-2 rounded-full shadow-lg ${currentIndex === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'}`}
-                aria-label="Previous testimonials"
-              >
-                <ChevronLeft size={24} />
-              </button>
-              <button 
-                onClick={handleNext} 
-                disabled={currentIndex >= testimonials.length - itemsPerPage} 
-                className={`absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white p-2 rounded-full shadow-lg ${currentIndex >= testimonials.length - itemsPerPage ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'}`}
-                aria-label="Next testimonials"
-              >
-                <ChevronRight size={24} />
-              </button>
-            </>
-          )}
-
-          {/* Desktop view */}
-          <div className="hidden md:grid grid-cols-3 gap-6 px-10">
-            {visibleTestimonials.map((testimonial) => (
-              <TestimonialCard
-                key={testimonial.id}
-                name={testimonial.profileData?.full_name || 'Happy Customer'}
-                rating={testimonial.rating}
-                comment={testimonial.comment}
-                date={new Date(testimonial.created_at).toLocaleDateString()}
-              />
-            ))}
-          </div>
+          <button 
+            onClick={scrollLeft} 
+            disabled={scrollPosition === 0} 
+            className={`absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white p-2 rounded-full shadow-lg ${scrollPosition === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'}`}
+            aria-label="Previous testimonials"
+          >
+            <ChevronLeft size={24} />
+          </button>
           
-          {/* Mobile view (scrollable) */}
-          <div className="md:hidden flex overflow-x-auto gap-4 pb-4 snap-x scrollbar-hide">
+          <button 
+            onClick={scrollRight} 
+            disabled={scrollPosition >= maxScroll} 
+            className={`absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white p-2 rounded-full shadow-lg ${scrollPosition >= maxScroll ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100'}`}
+            aria-label="Next testimonials"
+          >
+            <ChevronRight size={24} />
+          </button>
+
+          {/* Scrollable container for testimonials */}
+          <div 
+            ref={scrollContainerRef} 
+            onScroll={handleScroll}
+            className="flex overflow-x-auto gap-6 px-10 pb-4 scrollbar-hide scroll-smooth snap-x"
+          >
             {testimonials.map((testimonial) => (
-              <div className="min-w-[85%] snap-center" key={testimonial.id}>
+              <div key={testimonial.id} className="min-w-[300px] md:min-w-[350px] flex-shrink-0 snap-center">
                 <TestimonialCard
                   name={testimonial.profileData?.full_name || 'Happy Customer'}
                   rating={testimonial.rating}
@@ -153,20 +175,6 @@ const TestimonialSection = () => {
               </div>
             ))}
           </div>
-        </div>
-        
-        {/* Pagination dots for mobile */}
-        <div className="mt-6 flex justify-center md:hidden">
-          {Array.from({ length: Math.ceil(testimonials.length / itemsPerPage) }).map((_, index) => (
-            <button
-              key={index}
-              onClick={() => setCurrentIndex(index * itemsPerPage)}
-              className={`w-2 h-2 mx-1 rounded-full ${
-                Math.floor(currentIndex / itemsPerPage) === index ? 'bg-blue-600' : 'bg-gray-300'
-              }`}
-              aria-label={`Go to page ${index + 1}`}
-            />
-          ))}
         </div>
       </div>
     </div>

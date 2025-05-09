@@ -48,9 +48,30 @@ const Dashboard: React.FC = () => {
         // Get total orders
         const { data: orders, error: ordersError } = await supabase
           .from('orders')
-          .select('id, total_amount, created_at, profiles(full_name, email)');
+          .select('id, total_amount, created_at, user_id');
         
         if (ordersError) throw ordersError;
+        
+        // Get user profiles separately
+        const userIds = orders?.map(order => order.user_id).filter(Boolean) || [];
+        let userProfiles: Record<string, { full_name?: string; email?: string }> = {};
+        
+        if (userIds.length > 0) {
+          const { data: profiles, error: profilesError } = await supabase
+            .from('profiles')
+            .select('id, full_name, email')
+            .in('id', userIds);
+          
+          if (profilesError) {
+            console.error('Error fetching profiles:', profilesError);
+          } else if (profiles) {
+            // Create a lookup object
+            userProfiles = profiles.reduce((acc: Record<string, any>, profile) => {
+              acc[profile.id] = profile;
+              return acc;
+            }, {});
+          }
+        }
 
         // Get total products sold (sum of quantities from order_items)
         const { data: orderItems, error: itemsError } = await supabase
@@ -71,10 +92,20 @@ const Dashboard: React.FC = () => {
         const totalRevenue = orders?.reduce((sum: number, order: any) => sum + parseFloat(order.total_amount), 0) || 0;
         const productsSold = orderItems?.reduce((sum: number, item: any) => sum + item.quantity, 0) || 0;
         
-        // Get latest 5 orders
-        const recentOrders = orders?.sort((a: any, b: any) => {
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-        }).slice(0, 5) || [];
+        // Get latest 5 orders and attach user info
+        const recentOrders = (orders || [])
+          .sort((a: any, b: any) => {
+            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+          })
+          .slice(0, 5)
+          .map((order: any) => {
+            const userProfile = userProfiles[order.user_id] || {};
+            return {
+              ...order,
+              user_full_name: userProfile.full_name || 'Unknown',
+              user_email: userProfile.email || 'No email'
+            };
+          });
 
         setStats({
           totalOrders,
@@ -186,7 +217,7 @@ const Dashboard: React.FC = () => {
                 stats.recentOrders.map((order: any) => (
                   <div key={order.id} className="flex justify-between pb-3 border-b">
                     <div>
-                      <p className="font-medium">{order.profiles?.full_name || 'Unknown'}</p>
+                      <p className="font-medium">{order.user_full_name || 'Unknown'}</p>
                       <p className="text-sm text-gray-500">Order #{order.id.slice(0, 8)}</p>
                     </div>
                     <div className="text-right">

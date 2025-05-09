@@ -144,29 +144,6 @@ const Home = () => {
           </div>
         </div>
       </section>
-
-      {/* Newsletter Section */}
-      <section className="py-16 bg-tommyfx-blue text-white">
-        <div className="container-custom px-4">
-          <div className="max-w-2xl mx-auto text-center">
-            <h2 className="text-3xl font-bold mb-6">Join Our Beauty Community</h2>
-            <p className="mb-8">
-              Subscribe to our newsletter for exclusive offers, beauty tips, and early access to new product launches.
-            </p>
-            <form className="flex flex-col sm:flex-row gap-2 max-w-md mx-auto">
-              <input 
-                type="email" 
-                placeholder="Your email address"
-                className="px-4 py-3 flex-1 rounded-md text-gray-900 focus:outline-none"
-                required
-              />
-              <Button className="bg-white text-tommyfx-blue hover:bg-gray-100">
-                Subscribe
-              </Button>
-            </form>
-          </div>
-        </div>
-      </section>
     </div>
   );
 };

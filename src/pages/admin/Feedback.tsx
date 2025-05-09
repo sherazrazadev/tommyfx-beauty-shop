@@ -18,10 +18,8 @@ type FeedbackItem = {
   created_at: string;
   user_id: string;
   approved: boolean;
-  profileData?: {
-    full_name: string;
-    email: string;
-  };
+  user_name?: string;
+  user_email?: string;
 };
 
 const FeedbackPage = () => {
@@ -46,29 +44,62 @@ const FeedbackPage = () => {
   const fetchFeedback = async () => {
     setLoading(true);
     try {
-      const query = supabase
+      // First get all feedback items
+      const queryFeedback = supabase
         .from('feedback')
-        .select('*, profiles(full_name, email)')
+        .select('*')
         .order('created_at', { ascending: false });
         
       if (filterApproved) {
-        query.eq('approved', true);
+        queryFeedback.eq('approved', true);
       }
       
-      const { data, error } = await query;
+      const { data: feedbackData, error: feedbackError } = await queryFeedback;
       
-      if (error) throw error;
+      if (feedbackError) throw feedbackError;
       
-      if (data) {
-        const formattedData = data.map(item => ({
-          ...item,
-          profileData: {
-            full_name: item.profiles?.full_name || 'Anonymous',
-            email: item.profiles?.email || 'N/A'
-          }
-        }));
+      // If we have feedback data, get the user profiles separately
+      if (feedbackData && feedbackData.length > 0) {
+        // Get unique user IDs
+        const userIds = feedbackData
+          .map(item => item.user_id)
+          .filter((id): id is string => id !== null);
+          
+        // Fetch profiles for these users if we have any user IDs
+        const formattedFeedback: FeedbackItem[] = [...feedbackData];
         
-        setFeedbackItems(formattedData);
+        if (userIds.length > 0) {
+          const { data: profilesData, error: profilesError } = await supabase
+            .from('profiles')
+            .select('id, full_name, email')
+            .in('id', userIds);
+            
+          if (profilesError) {
+            console.error('Error fetching profiles:', profilesError);
+          } else if (profilesData) {
+            // Link profile data to feedback items
+            formattedFeedback.forEach(item => {
+              const userProfile = profilesData.find(profile => profile.id === item.user_id);
+              if (userProfile) {
+                item.user_name = userProfile.full_name || 'Anonymous';
+                item.user_email = userProfile.email || 'No email';
+              } else {
+                item.user_name = 'Anonymous';
+                item.user_email = 'No email';
+              }
+            });
+          }
+        } else {
+          // Set default values for items without user_id
+          formattedFeedback.forEach(item => {
+            item.user_name = 'Anonymous';
+            item.user_email = 'No email';
+          });
+        }
+        
+        setFeedbackItems(formattedFeedback);
+      } else {
+        setFeedbackItems([]);
       }
     } catch (error) {
       console.error('Error fetching feedback:', error);
@@ -200,8 +231,8 @@ const FeedbackPage = () => {
                   <div className="flex-1">
                     <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
                       <div>
-                        <p className="font-medium">{item.profileData?.full_name}</p>
-                        <p className="text-sm text-gray-600">{item.profileData?.email}</p>
+                        <p className="font-medium">{item.user_name || 'Anonymous'}</p>
+                        <p className="text-sm text-gray-600">{item.user_email || 'No email'}</p>
                       </div>
                       <div className="text-yellow-500 font-medium">
                         {renderStars(item.rating)}

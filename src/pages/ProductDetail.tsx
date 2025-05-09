@@ -19,67 +19,19 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useCart } from '@/hooks/useCart';
-
-// Mock data for reviews and related products - will be replaced later
-const reviews = [
-  {
-    name: 'Sophie L.',
-    rating: 5,
-    date: 'May 12, 2025',
-    comment: "This serum has completely transformed my dry skin. I have been using it for a month and my skin looks so much more plump and hydrated."
-  },
-  {
-    name: 'Michael R.',
-    rating: 4,
-    date: 'April 30, 2025',
-    comment: "Bought this for my wife and she loves it. Says it absorbs quickly and doesn't leave a sticky residue like other serums."
-  },
-  {
-    name: 'Alicia T.',
-    rating: 5,
-    date: 'April 22, 2025',
-    comment: "My new holy grail product! Feels luxurious and my skin has never looked better. Will definitely repurchase."
-  }
-];
-
-const relatedProducts = [
-  {
-    id: '5',
-    name: 'Anti-Aging Night Cream',
-    price: 39.99,
-    image: 'https://source.unsplash.com/1Y_EeeOvzQQ',
-    category: 'Skincare'
-  },
-  {
-    id: '9',
-    name: 'Exfoliating Face Scrub',
-    price: 22.99,
-    image: 'https://source.unsplash.com/mEZ3PoFGs_k',
-    category: 'Skincare'
-  },
-  {
-    id: '2',
-    name: 'Matte Finish Foundation',
-    price: 29.99,
-    image: 'https://source.unsplash.com/UKWFNya-YHk',
-    category: 'Makeup'
-  },
-  {
-    id: '10',
-    name: 'Hydrating Lip Balm',
-    price: 12.99,
-    image: 'https://source.unsplash.com/eowjK7pqBhk',
-    category: 'Makeup'
-  }
-];
+import { useAuth } from '@/hooks/useAuth';
+import ReviewDialog from '@/components/reviews/ReviewDialog';
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
   const [quantity, setQuantity] = useState(1);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [product, setProduct] = useState<any>(null);
+  const [reviews, setReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
   const { addToCart } = useCart();
+  const { user } = useAuth();
   
   useEffect(() => {
     const fetchProduct = async () => {
@@ -110,9 +62,11 @@ const ProductDetail = () => {
               ingredients: 'Aqua, Glycerin, Sodium Hyaluronate, Tocopherol, Panthenol, Niacinamide, Allantoin, Aloe Barbadensis Leaf Juice, Phenoxyethanol, Ethylhexylglycerin',
               howToUse: 'Apply 2-3 drops to clean, dry skin morning and night. Gently press into skin, following with moisturizer.',
               benefits: ['Deep hydration', 'Improves elasticity', 'Reduces fine lines', 'Brightens complexion']
-            },
-            reviews
+            }
           });
+          
+          // Fetch reviews for this product
+          await fetchReviews(id);
         } else {
           console.log("No product found with ID:", id);
         }
@@ -125,6 +79,63 @@ const ProductDetail = () => {
     
     fetchProduct();
   }, [id]);
+  
+  const fetchReviews = async (productId: string) => {
+    try {
+      // Get approved feedback for this product
+      const { data: feedbackData, error: feedbackError } = await supabase
+        .from('feedback')
+        .select('*')
+        .eq('approved', true)
+        .order('created_at', { ascending: false });
+        
+      if (feedbackError) throw feedbackError;
+      
+      if (feedbackData && feedbackData.length > 0) {
+        // Get user profiles for these reviews
+        const userIds = feedbackData
+          .map(item => item.user_id)
+          .filter((id): id is string => id !== null);
+          
+        let userProfiles: Record<string, any> = {};
+        
+        if (userIds.length > 0) {
+          const { data: profilesData, error: profilesError } = await supabase
+            .from('profiles')
+            .select('id, full_name')
+            .in('id', userIds);
+            
+          if (profilesError) {
+            console.error('Error fetching profiles for reviews:', profilesError);
+          } else if (profilesData) {
+            userProfiles = profilesData.reduce((acc: Record<string, any>, profile) => {
+              acc[profile.id] = profile;
+              return acc;
+            }, {});
+          }
+        }
+        
+        // Format the reviews
+        const formattedReviews = feedbackData.map(feedback => {
+          const profile = userProfiles[feedback.user_id] || {};
+          return {
+            id: feedback.id,
+            name: profile.full_name || 'Happy Customer',
+            rating: feedback.rating,
+            date: new Date(feedback.created_at).toLocaleDateString(),
+            comment: feedback.comment
+          };
+        });
+        
+        setReviews(formattedReviews);
+      } else {
+        // If no reviews, set an empty array
+        setReviews([]);
+      }
+    } catch (error) {
+      console.error('Error fetching reviews:', error);
+    }
+  };
 
   const incrementQuantity = () => setQuantity(prev => prev + 1);
   const decrementQuantity = () => setQuantity(prev => (prev > 1 ? prev - 1 : 1));
@@ -143,6 +154,18 @@ const ProductDetail = () => {
         description: `${quantity} x ${product.name} added to your cart`,
       });
     }
+  };
+  
+  const handleOpenReviewDialog = () => {
+    if (!user) {
+      toast({
+        title: "Please log in",
+        description: "You need to be logged in to write a review.",
+        variant: "destructive"
+      });
+      return;
+    }
+    setReviewDialogOpen(true);
   };
 
   // Show loading state
@@ -172,8 +195,8 @@ const ProductDetail = () => {
   }
 
   // Calculate average rating
-  const averageRating = 
-    product.reviews.reduce((sum: number, review: any) => sum + review.rating, 0) / product.reviews.length;
+  const averageRating = reviews.length > 0 ? 
+    reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length : 0;
 
   return (
     <div>
@@ -187,8 +210,8 @@ const ProductDetail = () => {
               Shop
             </Link>
             <ChevronRight size={16} className="mx-2 text-gray-400" />
-            <Link to={`/categories/${product.category.toLowerCase()}`} className="text-gray-500 hover:text-tommyfx-blue">
-              {product.category}
+            <Link to={`/categories/${product.category?.toLowerCase()}`} className="text-gray-500 hover:text-tommyfx-blue">
+              {product.category || 'Products'}
             </Link>
             <ChevronRight size={16} className="mx-2 text-gray-400" />
             <span className="text-gray-800">{product.name}</span>
@@ -232,7 +255,7 @@ const ProductDetail = () => {
             {/* Product Info */}
             <div>
               <span className="text-tommyfx-blue uppercase text-sm font-medium tracking-wide">
-                {product.category}
+                {product.category || 'Product'}
               </span>
               <h1 className="text-3xl font-bold mt-2 mb-4">{product.name}</h1>
               
@@ -247,7 +270,7 @@ const ProductDetail = () => {
                   ))}
                 </div>
                 <span className="ml-2 text-sm text-gray-500">
-                  {product.reviews.length} reviews
+                  {reviews.length} {reviews.length === 1 ? 'review' : 'reviews'}
                 </span>
               </div>
               
@@ -324,7 +347,7 @@ const ProductDetail = () => {
               <TabsTrigger value="ingredients" className="flex-1 py-3">Ingredients</TabsTrigger>
               <TabsTrigger value="howToUse" className="flex-1 py-3">How to Use</TabsTrigger>
               <TabsTrigger value="reviews" className="flex-1 py-3">
-                Reviews ({product.reviews.length})
+                Reviews ({reviews.length})
               </TabsTrigger>
             </TabsList>
             
@@ -334,7 +357,7 @@ const ProductDetail = () => {
                 <p className="mb-4">{product.description}</p>
                 <h4 className="text-lg font-medium mb-3">Benefits</h4>
                 <ul className="list-disc pl-5 space-y-2">
-                  {product.details.benefits.map((benefit: string, index: number) => (
+                  {product.details?.benefits?.map((benefit: string, index: number) => (
                     <li key={index}>{benefit}</li>
                   ))}
                 </ul>
@@ -344,14 +367,14 @@ const ProductDetail = () => {
             <TabsContent value="ingredients" className="animate-fade-in">
               <div className="prose max-w-none">
                 <h3 className="text-xl font-medium mb-4">Ingredients</h3>
-                <p>{product.details.ingredients}</p>
+                <p>{product.details?.ingredients}</p>
               </div>
             </TabsContent>
             
             <TabsContent value="howToUse" className="animate-fade-in">
               <div className="prose max-w-none">
                 <h3 className="text-xl font-medium mb-4">How to Use</h3>
-                <p>{product.details.howToUse}</p>
+                <p>{product.details?.howToUse}</p>
               </div>
             </TabsContent>
             
@@ -359,28 +382,35 @@ const ProductDetail = () => {
               <div>
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-xl font-medium">Customer Reviews</h3>
-                  <Button variant="outline">Write a Review</Button>
+                  <Button onClick={handleOpenReviewDialog} variant="outline">Write a Review</Button>
                 </div>
                 
                 <div className="space-y-6">
-                  {product.reviews.map((review: any, index: number) => (
-                    <div key={index} className="border-b pb-6">
-                      <div className="flex justify-between mb-2">
-                        <h4 className="font-medium">{review.name}</h4>
-                        <span className="text-sm text-gray-500">{review.date}</span>
+                  {reviews.length > 0 ? (
+                    reviews.map((review) => (
+                      <div key={review.id} className="border-b pb-6">
+                        <div className="flex justify-between mb-2">
+                          <h4 className="font-medium">{review.name}</h4>
+                          <span className="text-sm text-gray-500">{review.date}</span>
+                        </div>
+                        <div className="flex mb-2">
+                          {[...Array(5)].map((_, i) => (
+                            <Star
+                              key={i}
+                              size={16}
+                              className={i < review.rating ? "fill-tommyfx-blue text-tommyfx-blue" : "text-gray-300"}
+                            />
+                          ))}
+                        </div>
+                        <p className="text-gray-700">{review.comment}</p>
                       </div>
-                      <div className="flex mb-2">
-                        {[...Array(5)].map((_, i) => (
-                          <Star
-                            key={i}
-                            size={16}
-                            className={i < review.rating ? "fill-tommyfx-blue text-tommyfx-blue" : "text-gray-300"}
-                          />
-                        ))}
-                      </div>
-                      <p className="text-gray-700">{review.comment}</p>
+                    ))
+                  ) : (
+                    <div className="text-center py-10 bg-gray-50 rounded">
+                      <p className="text-gray-500 mb-2">No reviews yet</p>
+                      <p className="text-gray-500 text-sm">Be the first to review this product</p>
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
             </TabsContent>
@@ -388,25 +418,34 @@ const ProductDetail = () => {
         </div>
       </section>
 
-      {/* Related Products */}
+      {/* Related Products Section */}
       <section className="py-12">
         <div className="container-custom">
           <h2 className="text-2xl font-bold mb-6">You May Also Like</h2>
           
-          <div className="product-grid">
-            {relatedProducts.map(product => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {/* Related products would go here - using mock data for now */}
+            {Array(4).fill(null).map((_, idx) => (
               <ProductCard
-                key={product.id}
-                id={product.id}
-                name={product.name}
-                price={product.price}
-                image={product.image}
-                category={product.category}
+                key={idx}
+                id={`related-${idx}`}
+                name={`Related Product ${idx + 1}`}
+                price={29.99}
+                image={`https://source.unsplash.com/random/300x300?beauty&sig=${idx}`}
+                category="Related"
               />
             ))}
           </div>
         </div>
       </section>
+      
+      {/* Review Dialog */}
+      <ReviewDialog 
+        isOpen={reviewDialogOpen}
+        onClose={() => setReviewDialogOpen(false)}
+        productId={id || ''}
+        productName={product.name}
+      />
     </div>
   );
 };
