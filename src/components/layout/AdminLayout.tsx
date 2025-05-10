@@ -27,6 +27,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { isAdmin, user, loading, signOut } = useAuth();
+  const [redirected, setRedirected] = useState(false);
   
   useEffect(() => {
     if (loading) {
@@ -34,17 +35,18 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
       return;
     }
     
-    // Redirect if not admin or not logged in
-    if (!user || !isAdmin) {
+    // Only redirect if we haven't already and user is not admin
+    if (!redirected && (!user || !isAdmin)) {
       console.log('AdminLayout: Access denied', { user: !!user, isAdmin });
       toast({
         title: "Access denied",
         description: "You need to be an admin to access this page",
         variant: "destructive"
       });
+      setRedirected(true);
       navigate('/login');
     }
-  }, [isAdmin, user, loading, navigate]);
+  }, [isAdmin, user, loading, navigate, redirected]);
   
   const navigation = [
     {
@@ -100,6 +102,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
     }
   };
 
+  // Show loading state while authentication is being checked
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -108,6 +111,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
     );
   }
   
+  // Don't render content if user is not admin
   if (!user || !isAdmin) {
     return null; // Don't render content, redirect happens in useEffect
   }

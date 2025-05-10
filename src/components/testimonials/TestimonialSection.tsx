@@ -3,6 +3,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import TestimonialCard from '../ui/TestimonialCard';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export type Testimonial = {
   id: string;
@@ -21,6 +22,7 @@ const TestimonialSection = () => {
   useEffect(() => {
     const fetchApprovedFeedback = async () => {
       try {
+        console.log("Fetching approved testimonials...");
         const { data, error } = await supabase
           .from('feedback')
           .select(`
@@ -36,6 +38,8 @@ const TestimonialSection = () => {
           .limit(10);
 
         if (error) throw error;
+        
+        console.log("Feedback entries fetched:", data?.length || 0);
 
         // Fetch user profiles separately to avoid relation errors
         let mappedTestimonials: Testimonial[] = (data || []).map(item => ({
@@ -53,12 +57,14 @@ const TestimonialSection = () => {
           .filter(id => id != null) as string[];
 
         if (userIds && userIds.length > 0) {
+          console.log("Fetching user profiles for testimonials...");
           const { data: profilesData, error: profilesError } = await supabase
             .from('profiles')
             .select('id, full_name')
             .in('id', userIds);
 
           if (!profilesError && profilesData) {
+            console.log("Profiles fetched for testimonials:", profilesData.length);
             // Create a lookup map for profiles
             const profileMap: Record<string, { full_name: string }> = {};
             profilesData.forEach(profile => {
@@ -79,7 +85,7 @@ const TestimonialSection = () => {
           }
         }
 
-        console.log('Fetched testimonials:', mappedTestimonials);
+        console.log('Processed testimonials:', mappedTestimonials);
         setTestimonials(mappedTestimonials);
       } catch (error) {
         console.error('Error fetching testimonials:', error);
@@ -106,16 +112,18 @@ const TestimonialSection = () => {
 
   if (loading) {
     return (
-      <div className="container-custom py-16">
-        <div className="text-center mb-8">
-          <h2 className="text-3xl font-serif font-bold mb-2">Customer Testimonials</h2>
-          <p className="text-gray-600">What our customers are saying</p>
-        </div>
-        <div className="flex justify-center">
-          <div className="animate-pulse flex space-x-4">
-            <div className="rounded-md bg-gray-200 h-40 w-80"></div>
-            <div className="rounded-md bg-gray-200 h-40 w-80"></div>
-            <div className="rounded-md bg-gray-200 h-40 w-80"></div>
+      <div className="bg-white py-16">
+        <div className="container-custom">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-serif font-bold mb-2">Customer Testimonials</h2>
+            <p className="text-gray-600">What our customers are saying</p>
+          </div>
+          <div className="flex justify-center">
+            <div className="flex space-x-4 overflow-x-auto">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-40 w-80" />
+              ))}
+            </div>
           </div>
         </div>
       </div>

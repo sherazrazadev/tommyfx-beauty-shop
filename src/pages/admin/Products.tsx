@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   ChevronRight, 
@@ -14,110 +13,79 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import AdminLayout from '@/components/layout/AdminLayout';
+import { supabase } from '@/integrations/supabase/client';
+import { Skeleton } from '@/components/ui/skeleton';
+import { toast } from '@/components/ui/use-toast';
 
-// Mock data
-const products = [
-  {
-    id: 'P1001',
-    name: 'Hydrating Facial Serum',
-    category: 'Skincare',
-    price: 34.99,
-    stock: 45,
-    status: 'Active',
-    image: 'https://source.unsplash.com/oG8PIWBc3nE'
-  },
-  {
-    id: 'P1002',
-    name: 'Matte Finish Foundation',
-    category: 'Makeup',
-    price: 29.99,
-    stock: 38,
-    status: 'Active',
-    image: 'https://source.unsplash.com/UKWFNya-YHk'
-  },
-  {
-    id: 'P1003',
-    name: 'Repairing Hair Mask',
-    category: 'Hair',
-    price: 24.99,
-    stock: 27,
-    status: 'Active',
-    image: 'https://source.unsplash.com/eeAZHchRdgA'
-  },
-  {
-    id: 'P1004',
-    name: 'Nourishing Body Oil',
-    category: 'Body',
-    price: 19.99,
-    stock: 32,
-    status: 'Active',
-    image: 'https://source.unsplash.com/MhOcP0qEZLw'
-  },
-  {
-    id: 'P1005',
-    name: 'Anti-Aging Night Cream',
-    category: 'Skincare',
-    price: 39.99,
-    stock: 19,
-    status: 'Active',
-    image: 'https://source.unsplash.com/1Y_EeeOvzQQ'
-  },
-  {
-    id: 'P1006',
-    name: 'Volumizing Mascara',
-    category: 'Makeup',
-    price: 17.99,
-    stock: 54,
-    status: 'Active',
-    image: 'https://source.unsplash.com/fJTqyZMOh18'
-  },
-  {
-    id: 'P1007',
-    name: 'Soothing Bath Bombs',
-    category: 'Bath',
-    price: 14.99,
-    stock: 42,
-    status: 'Active',
-    image: 'https://source.unsplash.com/ql3OpWIeYVw'
-  },
-  {
-    id: 'P1008',
-    name: 'Rose Perfume Spray',
-    category: 'Fragrance',
-    price: 49.99,
-    stock: 15,
-    status: 'Low Stock',
-    image: 'https://source.unsplash.com/KLfD2eUNGEY'
-  },
-  {
-    id: 'P1009',
-    name: 'Exfoliating Face Scrub',
-    category: 'Skincare',
-    price: 22.99,
-    stock: 28,
-    status: 'Active',
-    image: 'https://source.unsplash.com/mEZ3PoFGs_k'
-  },
-  {
-    id: 'P1010',
-    name: 'Hydrating Lip Balm',
-    category: 'Makeup',
-    price: 12.99,
-    stock: 0,
-    status: 'Out of Stock',
-    image: 'https://source.unsplash.com/eowjK7pqBhk'
-  }
-];
-
-const categories = ['All', 'Skincare', 'Makeup', 'Hair', 'Body', 'Bath', 'Fragrance'];
+type ProductType = {
+  id: string;
+  name: string;
+  category: string;
+  price: number;
+  stock: number;
+  status: string;
+  image_url: string;
+  description?: string;
+};
 
 const Products = () => {
+  const [products, setProducts] = useState<ProductType[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
   const [sortField, setSortField] = useState('name');
   const [sortDirection, setSortDirection] = useState('asc');
   const [view, setView] = useState<'grid' | 'list'>('grid');
+  const [categories, setCategories] = useState<string[]>(['All']);
+  
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setLoading(true);
+      try {
+        console.log("Fetching products...");
+        const { data, error } = await supabase
+          .from('products')
+          .select('*');
+        
+        if (error) {
+          console.error("Error fetching products:", error);
+          throw error;
+        }
+        
+        console.log("Products fetched:", data?.length || 0);
+        
+        // Transform data to match our ProductType
+        const transformedProducts: ProductType[] = (data || []).map(product => ({
+          id: product.id,
+          name: product.name,
+          category: product.category || 'Uncategorized',
+          price: parseFloat(product.price),
+          // Mock stock and status since they're not in the database
+          stock: Math.floor(Math.random() * 50) + 1,
+          status: Math.random() > 0.2 ? 'Active' : Math.random() > 0.5 ? 'Low Stock' : 'Out of Stock',
+          image_url: product.image_url || 'https://source.unsplash.com/oG8PIWBc3nE'
+        }));
+        
+        // Extract unique categories
+        const uniqueCategories = ['All', ...new Set(transformedProducts.map(p => p.category))];
+        setCategories(uniqueCategories);
+        
+        setProducts(transformedProducts);
+      } catch (error) {
+        console.error('Error fetching products:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load products",
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchProducts();
+  }, []);
   
   // Filter and sort products
   const filteredProducts = products
@@ -222,11 +190,11 @@ const Products = () => {
           </div>
         </div>
 
-        {/* Products Display */}
+        {/* Products Display with loading state */}
         <div className="bg-white rounded-lg shadow-sm p-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="font-bold">
-              Products ({filteredProducts.length})
+              Products ({loading ? "..." : filteredProducts.length})
             </h2>
             <div className="flex gap-2">
               <Button 
@@ -246,138 +214,155 @@ const Products = () => {
             </div>
           </div>
           
-          {view === 'grid' ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filteredProducts.map(product => (
-                <div key={product.id} className="border rounded-lg overflow-hidden">
-                  <div className="aspect-square relative">
-                    <img 
-                      src={product.image} 
-                      alt={product.name} 
-                      className="w-full h-full object-cover" 
-                    />
-                    <div className={`absolute top-2 right-2 px-2 py-1 text-xs rounded-full ${
-                      product.status === 'Active' ? 'bg-green-100 text-green-800' :
-                      product.status === 'Out of Stock' ? 'bg-red-100 text-red-800' :
-                      'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {product.status}
-                    </div>
-                  </div>
-                  
-                  <div className="p-4">
-                    <h3 className="font-medium mb-1">{product.name}</h3>
-                    <p className="text-sm text-gray-500 mb-2">{product.category}</p>
-                    <div className="flex justify-between mb-3">
-                      <span className="font-medium">${product.price.toFixed(2)}</span>
-                      <span className="text-sm text-gray-500">Stock: {product.stock}</span>
+          {loading ? (
+            view === 'grid' ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+                  <Skeleton key={i} className="h-64 w-full rounded-lg" />
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <Skeleton className="h-10 w-full" />
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <Skeleton key={i} className="h-16 w-full" />
+                ))}
+              </div>
+            )
+          ) : (
+            view === 'grid' ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                {filteredProducts.map(product => (
+                  <div key={product.id} className="border rounded-lg overflow-hidden">
+                    <div className="aspect-square relative">
+                      <img 
+                        src={product.image_url} 
+                        alt={product.name} 
+                        className="w-full h-full object-cover" 
+                      />
+                      <div className={`absolute top-2 right-2 px-2 py-1 text-xs rounded-full ${
+                        product.status === 'Active' ? 'bg-green-100 text-green-800' :
+                        product.status === 'Out of Stock' ? 'bg-red-100 text-red-800' :
+                        'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {product.status}
+                      </div>
                     </div>
                     
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm" className="flex-1">Edit</Button>
-                      <Button variant="ghost" size="sm" className="text-red-500">Delete</Button>
+                    <div className="p-4">
+                      <h3 className="font-medium mb-1">{product.name}</h3>
+                      <p className="text-sm text-gray-500 mb-2">{product.category}</p>
+                      <div className="flex justify-between mb-3">
+                        <span className="font-medium">${product.price.toFixed(2)}</span>
+                        <span className="text-sm text-gray-500">Stock: {product.stock}</span>
+                      </div>
+                      
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm" className="flex-1">Edit</Button>
+                        <Button variant="ghost" size="sm" className="text-red-500">Delete</Button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="text-left bg-gray-50">
-                    <th className="p-3 font-medium">Image</th>
-                    <th className="p-3 font-medium">
-                      <button 
-                        onClick={() => handleSort('name')} 
-                        className="flex items-center focus:outline-none"
-                      >
-                        Product {renderSortIcon('name')}
-                      </button>
-                    </th>
-                    <th className="p-3 font-medium">
-                      <button 
-                        onClick={() => handleSort('category')} 
-                        className="flex items-center focus:outline-none"
-                      >
-                        Category {renderSortIcon('category')}
-                      </button>
-                    </th>
-                    <th className="p-3 font-medium">
-                      <button 
-                        onClick={() => handleSort('price')} 
-                        className="flex items-center focus:outline-none"
-                      >
-                        Price {renderSortIcon('price')}
-                      </button>
-                    </th>
-                    <th className="p-3 font-medium">
-                      <button 
-                        onClick={() => handleSort('stock')} 
-                        className="flex items-center focus:outline-none"
-                      >
-                        Stock {renderSortIcon('stock')}
-                      </button>
-                    </th>
-                    <th className="p-3 font-medium">Status</th>
-                    <th className="p-3 font-medium">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredProducts.map(product => (
-                    <tr key={product.id} className="border-t">
-                      <td className="p-3">
-                        <div className="w-12 h-12 rounded overflow-hidden">
-                          <img 
-                            src={product.image} 
-                            alt={product.name} 
-                            className="w-full h-full object-cover" 
-                          />
-                        </div>
-                      </td>
-                      <td className="p-3 font-medium">{product.name}</td>
-                      <td className="p-3">{product.category}</td>
-                      <td className="p-3">${product.price.toFixed(2)}</td>
-                      <td className="p-3">{product.stock}</td>
-                      <td className="p-3">
-                        <span className={`inline-block px-2 py-1 rounded-full text-xs ${
-                          product.status === 'Active' ? 'bg-green-100 text-green-800' :
-                          product.status === 'Out of Stock' ? 'bg-red-100 text-red-800' :
-                          'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {product.status}
-                        </span>
-                      </td>
-                      <td className="p-3">
-                        <div className="flex gap-2">
-                          <Button variant="outline" size="sm" className="p-2">
-                            <Eye size={16} />
-                          </Button>
-                          <Button variant="outline" size="sm" className="p-2">
-                            <Edit size={16} />
-                          </Button>
-                          <Button variant="outline" size="sm" className="p-2 text-red-500">
-                            <Trash2 size={16} />
-                          </Button>
-                        </div>
-                      </td>
+                ))}
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="text-left bg-gray-50">
+                      <th className="p-3 font-medium">Image</th>
+                      <th className="p-3 font-medium">
+                        <button 
+                          onClick={() => handleSort('name')} 
+                          className="flex items-center focus:outline-none"
+                        >
+                          Product {renderSortIcon('name')}
+                        </button>
+                      </th>
+                      <th className="p-3 font-medium">
+                        <button 
+                          onClick={() => handleSort('category')} 
+                          className="flex items-center focus:outline-none"
+                        >
+                          Category {renderSortIcon('category')}
+                        </button>
+                      </th>
+                      <th className="p-3 font-medium">
+                        <button 
+                          onClick={() => handleSort('price')} 
+                          className="flex items-center focus:outline-none"
+                        >
+                          Price {renderSortIcon('price')}
+                        </button>
+                      </th>
+                      <th className="p-3 font-medium">
+                        <button 
+                          onClick={() => handleSort('stock')} 
+                          className="flex items-center focus:outline-none"
+                        >
+                          Stock {renderSortIcon('stock')}
+                        </button>
+                      </th>
+                      <th className="p-3 font-medium">Status</th>
+                      <th className="p-3 font-medium">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-              
-              {filteredProducts.length === 0 && (
-                <div className="text-center py-8 text-gray-500">
-                  No products found matching your search criteria
-                </div>
-              )}
-            </div>
+                  </thead>
+                  <tbody>
+                    {filteredProducts.map(product => (
+                      <tr key={product.id} className="border-t">
+                        <td className="p-3">
+                          <div className="w-12 h-12 rounded overflow-hidden">
+                            <img 
+                              src={product.image_url} 
+                              alt={product.name} 
+                              className="w-full h-full object-cover" 
+                            />
+                          </div>
+                        </td>
+                        <td className="p-3 font-medium">{product.name}</td>
+                        <td className="p-3">{product.category}</td>
+                        <td className="p-3">${product.price.toFixed(2)}</td>
+                        <td className="p-3">{product.stock}</td>
+                        <td className="p-3">
+                          <span className={`inline-block px-2 py-1 rounded-full text-xs ${
+                            product.status === 'Active' ? 'bg-green-100 text-green-800' :
+                            product.status === 'Out of Stock' ? 'bg-red-100 text-red-800' :
+                            'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {product.status}
+                          </span>
+                        </td>
+                        <td className="p-3">
+                          <div className="flex gap-2">
+                            <Button variant="outline" size="sm" className="p-2">
+                              <Eye size={16} />
+                            </Button>
+                            <Button variant="outline" size="sm" className="p-2">
+                              <Edit size={16} />
+                            </Button>
+                            <Button variant="outline" size="sm" className="p-2 text-red-500">
+                              <Trash2 size={16} />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                
+                {filteredProducts.length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    No products found matching your search criteria
+                  </div>
+                )}
+              </div>
+            )
           )}
           
           {/* Pagination */}
           <div className="flex justify-between items-center mt-6">
             <div className="text-sm text-gray-500">
-              Showing {filteredProducts.length} of {products.length} products
+              Showing {loading ? "..." : filteredProducts.length} of {products.length} products
             </div>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" disabled>Previous</Button>

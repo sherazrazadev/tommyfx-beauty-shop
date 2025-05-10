@@ -1,10 +1,12 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Eye, Search, Filter, ArrowUp, ArrowDown, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import AdminLayout from '@/components/layout/AdminLayout';
+import { Skeleton } from '@/components/ui/skeleton';
+import { toast } from '@/components/ui/use-toast';
 
 type OrderType = {
   id: string;
@@ -36,6 +38,8 @@ const Orders: React.FC = () => {
     const fetchOrders = async () => {
       setLoading(true);
       try {
+        console.log("Fetching orders with filters:", { filter, sort, searchTerm });
+        
         let query = supabase.from('orders').select('*');
 
         // Apply status filter if not 'all'
@@ -53,7 +57,12 @@ const Orders: React.FC = () => {
 
         const { data: orderData, error: orderError } = await query;
 
-        if (orderError) throw orderError;
+        if (orderError) {
+          console.error("Error fetching orders:", orderError);
+          throw orderError;
+        }
+        
+        console.log("Orders fetched:", orderData?.length || 0);
 
         // Get user profile data in a separate query
         if (orderData && orderData.length > 0) {
@@ -65,7 +74,12 @@ const Orders: React.FC = () => {
             .select('id, email, full_name')
             .in('id', userIds);
           
-          if (profilesError) throw profilesError;
+          if (profilesError) {
+            console.error("Error fetching profiles:", profilesError);
+            throw profilesError;
+          }
+          
+          console.log("Profiles fetched:", profilesData?.length || 0);
           
           // Map profile data to orders
           const ordersWithProfiles = orderData.map(order => {
@@ -78,11 +92,17 @@ const Orders: React.FC = () => {
           });
           
           setOrders(ordersWithProfiles);
+          console.log("Orders with profiles processed:", ordersWithProfiles.length);
         } else {
           setOrders([]);
         }
       } catch (error) {
         console.error('Error fetching orders:', error);
+        toast({
+          title: "Error loading orders",
+          description: "There was a problem fetching the order data",
+          variant: "destructive"
+        });
       } finally {
         setLoading(false);
       }
@@ -128,130 +148,135 @@ const Orders: React.FC = () => {
   };
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Orders</h1>
-        <Button>
-          <Download size={16} className="mr-2" /> Export
-        </Button>
-      </div>
+    <AdminLayout>
+      <div className="p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold">Orders</h1>
+          <Button>
+            <Download size={16} className="mr-2" /> Export
+          </Button>
+        </div>
 
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-          {/* Search */}
-          <form onSubmit={handleSearch} className="w-full md:w-auto">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search orders..."
-                className="pl-10 pr-4 py-2 border rounded-md w-full md:w-64"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-              <Search size={16} className="absolute left-3 top-3 text-gray-400" />
-            </div>
-          </form>
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+            {/* Search */}
+            <form onSubmit={handleSearch} className="w-full md:w-auto">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search orders..."
+                  className="pl-10 pr-4 py-2 border rounded-md w-full md:w-64"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+                <Search size={16} className="absolute left-3 top-3 text-gray-400" />
+              </div>
+            </form>
 
-          {/* Filter */}
-          <div className="flex items-center gap-4">
-            <div className="flex items-center">
-              <Filter size={16} className="mr-2 text-gray-500" />
-              <span className="mr-2 text-gray-500">Filter:</span>
-              <select
-                className="border rounded-md px-3 py-2"
-                value={filter}
-                onChange={handleFilterChange}
-              >
-                <option value="all">All Orders</option>
-                <option value="pending">Pending</option>
-                <option value="processing">Processing</option>
-                <option value="delivered">Delivered</option>
-                <option value="cancelled">Cancelled</option>
-              </select>
+            {/* Filter */}
+            <div className="flex items-center gap-4">
+              <div className="flex items-center">
+                <Filter size={16} className="mr-2 text-gray-500" />
+                <span className="mr-2 text-gray-500">Filter:</span>
+                <select
+                  className="border rounded-md px-3 py-2"
+                  value={filter}
+                  onChange={handleFilterChange}
+                >
+                  <option value="all">All Orders</option>
+                  <option value="pending">Pending</option>
+                  <option value="processing">Processing</option>
+                  <option value="delivered">Delivered</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Orders Table */}
-        <div className="overflow-x-auto">
-          {loading ? (
-            <div className="flex justify-center py-8">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-tommyfx-blue"></div>
-            </div>
-          ) : orders.length > 0 ? (
-            <table className="w-full">
-              <thead className="bg-gray-50 text-left">
-                <tr>
-                  <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('id')}>
-                    <div className="flex items-center">
-                      Order ID {getSortIcon('id')}
-                    </div>
-                  </th>
-                  <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('customer_name')}>
-                    <div className="flex items-center">
-                      Customer {getSortIcon('customer_name')}
-                    </div>
-                  </th>
-                  <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('created_at')}>
-                    <div className="flex items-center">
-                      Date {getSortIcon('created_at')}
-                    </div>
-                  </th>
-                  <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('total_amount')}>
-                    <div className="flex items-center">
-                      Amount {getSortIcon('total_amount')}
-                    </div>
-                  </th>
-                  <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('status')}>
-                    <div className="flex items-center">
-                      Status {getSortIcon('status')}
-                    </div>
-                  </th>
-                  <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {orders.map((order) => (
-                  <tr key={order.id}>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="font-medium">{order.id.slice(0, 8)}...</span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div>
-                        <div className="font-medium">{order.customer_name || 'Unknown'}</div>
-                        <div className="text-sm text-gray-500">{order.customer_email || ''}</div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {new Date(order.created_at).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      ${order.total_amount.toFixed(2)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeClass(order.status)}`}>
-                        {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <Link to={`/admin/orders/${order.id}`} className="text-tommyfx-blue flex items-center">
-                        <Eye size={16} className="mr-1" /> View
-                      </Link>
-                    </td>
-                  </tr>
+          {/* Orders Table with loading state */}
+          <div className="overflow-x-auto">
+            {loading ? (
+              <div className="space-y-4 py-4">
+                <Skeleton className="h-12 w-full" />
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <Skeleton key={i} className="h-16 w-full" />
                 ))}
-              </tbody>
-            </table>
-          ) : (
-            <div className="text-center py-8">
-              <p className="text-gray-500">No orders found</p>
-            </div>
-          )}
+              </div>
+            ) : orders.length > 0 ? (
+              <table className="w-full">
+                <thead className="bg-gray-50 text-left">
+                  <tr>
+                    <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('id')}>
+                      <div className="flex items-center">
+                        Order ID {getSortIcon('id')}
+                      </div>
+                    </th>
+                    <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('customer_name')}>
+                      <div className="flex items-center">
+                        Customer {getSortIcon('customer_name')}
+                      </div>
+                    </th>
+                    <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('created_at')}>
+                      <div className="flex items-center">
+                        Date {getSortIcon('created_at')}
+                      </div>
+                    </th>
+                    <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('total_amount')}>
+                      <div className="flex items-center">
+                        Amount {getSortIcon('total_amount')}
+                      </div>
+                    </th>
+                    <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => handleSort('status')}>
+                      <div className="flex items-center">
+                        Status {getSortIcon('status')}
+                      </div>
+                    </th>
+                    <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {orders.map((order) => (
+                    <tr key={order.id}>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="font-medium">{order.id.slice(0, 8)}...</span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div>
+                          <div className="font-medium">{order.customer_name || 'Unknown'}</div>
+                          <div className="text-sm text-gray-500">{order.customer_email || ''}</div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {new Date(order.created_at).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        ${order.total_amount.toFixed(2)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeClass(order.status)}`}>
+                          {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <Link to={`/admin/orders/${order.id}`} className="text-tommyfx-blue flex items-center">
+                          <Eye size={16} className="mr-1" /> View
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-gray-500">No orders found</p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    </AdminLayout>
   );
 };
 

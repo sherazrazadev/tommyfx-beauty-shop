@@ -7,6 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import AdminLayout from '@/components/layout/AdminLayout';
 import { toast } from '@/components/ui/use-toast';
+import { Skeleton } from '@/components/ui/skeleton';
 
 // Types
 interface StatsType {
@@ -46,12 +47,19 @@ const Dashboard: React.FC = () => {
     const fetchDashboardData = async () => {
       setLoading(true);
       try {
+        console.log("Fetching dashboard data...");
+        
         // Get total orders
         const { data: orders, error: ordersError } = await supabase
           .from('orders')
           .select('id, total_amount, created_at, user_id');
         
-        if (ordersError) throw ordersError;
+        if (ordersError) {
+          console.error("Error fetching orders:", ordersError);
+          throw ordersError;
+        }
+        
+        console.log("Orders fetched:", orders?.length || 0);
         
         // Fetch user profiles in a separate query
         const userIds = orders?.map(order => order.user_id).filter(Boolean) || [];
@@ -66,6 +74,7 @@ const Dashboard: React.FC = () => {
           if (profilesError) {
             console.error('Error fetching profiles:', profilesError);
           } else if (profiles) {
+            console.log("Profiles fetched:", profiles.length);
             // Create a lookup object
             userProfiles = profiles.reduce((acc: Record<string, any>, profile) => {
               acc[profile.id] = profile;
@@ -79,14 +88,24 @@ const Dashboard: React.FC = () => {
           .from('order_items')
           .select('quantity');
         
-        if (itemsError) throw itemsError;
+        if (itemsError) {
+          console.error("Error fetching order items:", itemsError);
+          throw itemsError;
+        }
+        
+        console.log("Order items fetched:", orderItems?.length || 0);
         
         // Get feedback count
         const { count: feedbackCount, error: feedbackError } = await supabase
           .from('feedback')
           .select('*', { count: 'exact', head: true });
           
-        if (feedbackError) throw feedbackError;
+        if (feedbackError) {
+          console.error("Error fetching feedback count:", feedbackError);
+          throw feedbackError;
+        }
+        
+        console.log("Feedback count:", feedbackCount);
 
         // Calculate stats
         const totalOrders = orders?.length || 0;
@@ -107,6 +126,8 @@ const Dashboard: React.FC = () => {
               user_email: userProfile.email || 'No email'
             };
           });
+          
+        console.log("Recent orders processed:", recentOrders.length);
 
         setStats({
           totalOrders,
@@ -131,6 +152,7 @@ const Dashboard: React.FC = () => {
     fetchDashboardData();
   }, [user]);
 
+  // Render dashboard with loadable sections
   return (
     <AdminLayout>
       <div className="p-6">
@@ -139,106 +161,138 @@ const Dashboard: React.FC = () => {
           <span className="text-sm text-gray-500">Welcome, Admin</span>
         </div>
         
-        {/* Stats Cards */}
+        {/* Stats Cards with loading states */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-          <div className="bg-white p-6 rounded-lg shadow-sm">
-            <div className="flex items-center">
-              <div className="bg-blue-100 p-3 rounded-full mr-4">
-                <ShoppingBag size={24} className="text-blue-600" />
+          {loading ? (
+            <>
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="bg-white p-6 rounded-lg shadow-sm">
+                  <Skeleton className="h-12 w-full mb-2" />
+                  <Skeleton className="h-6 w-1/2" />
+                </div>
+              ))}
+            </>
+          ) : (
+            <>
+              <div className="bg-white p-6 rounded-lg shadow-sm">
+                <div className="flex items-center">
+                  <div className="bg-blue-100 p-3 rounded-full mr-4">
+                    <ShoppingBag size={24} className="text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Total Orders</p>
+                    <h3 className="text-2xl font-bold">{stats.totalOrders}</h3>
+                  </div>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-gray-500">Total Orders</p>
-                <h3 className="text-2xl font-bold">{stats.totalOrders}</h3>
+              
+              <div className="bg-white p-6 rounded-lg shadow-sm">
+                <div className="flex items-center">
+                  <div className="bg-green-100 p-3 rounded-full mr-4">
+                    <DollarSign size={24} className="text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Total Revenue</p>
+                    <h3 className="text-2xl font-bold">${stats.totalRevenue.toFixed(2)}</h3>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-          
-          <div className="bg-white p-6 rounded-lg shadow-sm">
-            <div className="flex items-center">
-              <div className="bg-green-100 p-3 rounded-full mr-4">
-                <DollarSign size={24} className="text-green-600" />
+              
+              <div className="bg-white p-6 rounded-lg shadow-sm">
+                <div className="flex items-center">
+                  <div className="bg-orange-100 p-3 rounded-full mr-4">
+                    <Package size={24} className="text-orange-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Products Sold</p>
+                    <h3 className="text-2xl font-bold">{stats.productsSold}</h3>
+                  </div>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-gray-500">Total Revenue</p>
-                <h3 className="text-2xl font-bold">${stats.totalRevenue.toFixed(2)}</h3>
+              
+              <div className="bg-white p-6 rounded-lg shadow-sm">
+                <div className="flex items-center">
+                  <div className="bg-purple-100 p-3 rounded-full mr-4">
+                    <MessageSquare size={24} className="text-purple-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Feedback</p>
+                    <h3 className="text-2xl font-bold">{stats.feedbackCount}</h3>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-          
-          <div className="bg-white p-6 rounded-lg shadow-sm">
-            <div className="flex items-center">
-              <div className="bg-orange-100 p-3 rounded-full mr-4">
-                <Package size={24} className="text-orange-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Products Sold</p>
-                <h3 className="text-2xl font-bold">{stats.productsSold}</h3>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white p-6 rounded-lg shadow-sm">
-            <div className="flex items-center">
-              <div className="bg-purple-100 p-3 rounded-full mr-4">
-                <MessageSquare size={24} className="text-purple-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Feedback</p>
-                <h3 className="text-2xl font-bold">{stats.feedbackCount}</h3>
-              </div>
-            </div>
-          </div>
+            </>
+          )}
         </div>
         
-        {/* Charts & Tables */}
+        {/* Charts & Tables with loading states */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="bg-white p-6 rounded-lg shadow-sm lg:col-span-2">
-            <h2 className="text-lg font-medium mb-4">Weekly Sales</h2>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={salesData}
-                  margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="sales" fill="#4f46e5" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-          
-          <div className="bg-white p-6 rounded-lg shadow-sm">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-medium">Recent Orders</h2>
-              <Link to="/admin/orders" className="text-sm text-blue-600 hover:underline">
-                View all
-              </Link>
-            </div>
-            
-            <div className="space-y-4">
-              {stats.recentOrders.length > 0 ? (
-                stats.recentOrders.map((order: any) => (
-                  <div key={order.id} className="flex justify-between pb-3 border-b">
-                    <div>
-                      <p className="font-medium">{order.user_full_name || 'Unknown'}</p>
-                      <p className="text-sm text-gray-500">Order #{order.id.slice(0, 8)}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium">${parseFloat(order.total_amount).toFixed(2)}</p>
-                      <p className="text-sm text-gray-500">
-                        {new Date(order.created_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-gray-500 text-center py-4">No recent orders</p>
-              )}
-            </div>
-          </div>
+          {loading ? (
+            <>
+              <div className="bg-white p-6 rounded-lg shadow-sm lg:col-span-2">
+                <Skeleton className="h-8 w-40 mb-4" />
+                <Skeleton className="h-80 w-full" />
+              </div>
+              <div className="bg-white p-6 rounded-lg shadow-sm">
+                <Skeleton className="h-8 w-40 mb-4" />
+                <div className="space-y-4">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <Skeleton key={i} className="h-16 w-full" />
+                  ))}
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="bg-white p-6 rounded-lg shadow-sm lg:col-span-2">
+                <h2 className="text-lg font-medium mb-4">Weekly Sales</h2>
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={salesData}
+                      margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" />
+                      <YAxis />
+                      <Tooltip />
+                      <Bar dataKey="sales" fill="#4f46e5" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+              
+              <div className="bg-white p-6 rounded-lg shadow-sm">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-lg font-medium">Recent Orders</h2>
+                  <Link to="/admin/orders" className="text-sm text-blue-600 hover:underline">
+                    View all
+                  </Link>
+                </div>
+                
+                <div className="space-y-4">
+                  {stats.recentOrders.length > 0 ? (
+                    stats.recentOrders.map((order: any) => (
+                      <div key={order.id} className="flex justify-between pb-3 border-b">
+                        <div>
+                          <p className="font-medium">{order.user_full_name || 'Unknown'}</p>
+                          <p className="text-sm text-gray-500">Order #{order.id.slice(0, 8)}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium">${parseFloat(order.total_amount).toFixed(2)}</p>
+                          <p className="text-sm text-gray-500">
+                            {new Date(order.created_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-gray-500 text-center py-4">No recent orders</p>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </AdminLayout>
