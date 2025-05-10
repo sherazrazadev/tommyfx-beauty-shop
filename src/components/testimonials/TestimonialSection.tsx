@@ -26,8 +26,9 @@ const TestimonialSection = () => {
           .select(`
             id, 
             comment, 
-            rating, 
-            profiles(full_name, email), 
+            rating,
+            user_id,
+            product_id, 
             products(name)
           `)
           .eq('approved', true)
@@ -36,15 +37,47 @@ const TestimonialSection = () => {
 
         if (error) throw error;
 
-        // Map the feedback data to testimonials format
-        const mappedTestimonials: Testimonial[] = (data || []).map(item => ({
+        // Fetch user profiles separately to avoid relation errors
+        let mappedTestimonials: Testimonial[] = (data || []).map(item => ({
           id: item.id,
-          author: item.profiles?.full_name || 'Anonymous Customer',
+          author: 'Anonymous Customer', // Default name, will update if profile found
           role: item.products?.name ? `on ${item.products.name}` : 'on TommyFX Beauty',
           content: item.comment,
           rating: item.rating,
           product_name: item.products?.name
         }));
+
+        // If we have user IDs, fetch their profiles
+        const userIds = data
+          ?.map(item => item.user_id)
+          .filter(id => id != null) as string[];
+
+        if (userIds && userIds.length > 0) {
+          const { data: profilesData, error: profilesError } = await supabase
+            .from('profiles')
+            .select('id, full_name')
+            .in('id', userIds);
+
+          if (!profilesError && profilesData) {
+            // Create a lookup map for profiles
+            const profileMap: Record<string, { full_name: string }> = {};
+            profilesData.forEach(profile => {
+              profileMap[profile.id] = profile;
+            });
+
+            // Update testimonials with author names from profiles
+            mappedTestimonials = mappedTestimonials.map(testimonial => {
+              const feedbackItem = data?.find(item => item.id === testimonial.id);
+              if (feedbackItem?.user_id && profileMap[feedbackItem.user_id]) {
+                return {
+                  ...testimonial,
+                  author: profileMap[feedbackItem.user_id].full_name || 'Anonymous Customer'
+                };
+              }
+              return testimonial;
+            });
+          }
+        }
 
         console.log('Fetched testimonials:', mappedTestimonials);
         setTestimonials(mappedTestimonials);
@@ -120,10 +153,10 @@ const TestimonialSection = () => {
             {testimonials.map((testimonial) => (
               <div key={testimonial.id} className="flex-shrink-0 snap-start" style={{ width: '350px' }}>
                 <TestimonialCard
-                  author={testimonial.author}
-                  role={testimonial.role}
-                  content={testimonial.content}
+                  name={testimonial.author}
                   rating={testimonial.rating}
+                  comment={testimonial.content}
+                  date={testimonial.role}
                 />
               </div>
             ))}
