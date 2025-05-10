@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -15,7 +15,6 @@ import {
   Bell
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/components/ui/use-toast';
 
@@ -30,8 +29,14 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   const { isAdmin, user, loading, signOut } = useAuth();
   
   useEffect(() => {
-    // Redirect if not admin
-    if (!loading && (!user || !isAdmin)) {
+    if (loading) {
+      // Wait for loading to complete
+      return;
+    }
+    
+    // Redirect if not admin or not logged in
+    if (!user || !isAdmin) {
+      console.log('AdminLayout: Access denied', { user: !!user, isAdmin });
       toast({
         title: "Access denied",
         description: "You need to be an admin to access this page",
@@ -103,8 +108,8 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
     );
   }
   
-  if (!isAdmin) {
-    return null;
+  if (!user || !isAdmin) {
+    return null; // Don't render content, redirect happens in useEffect
   }
 
   return (

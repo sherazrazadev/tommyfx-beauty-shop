@@ -6,6 +6,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import AdminLayout from '@/components/layout/AdminLayout';
+import { toast } from '@/components/ui/use-toast';
 
 // Types
 interface StatsType {
@@ -52,7 +53,7 @@ const Dashboard: React.FC = () => {
         
         if (ordersError) throw ordersError;
         
-        // Get user profiles separately
+        // Fetch user profiles in a separate query
         const userIds = orders?.map(order => order.user_id).filter(Boolean) || [];
         let userProfiles: Record<string, { full_name?: string; email?: string }> = {};
         
@@ -117,6 +118,11 @@ const Dashboard: React.FC = () => {
 
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load dashboard data",
+          variant: "destructive"
+        });
       } finally {
         setLoading(false);
       }

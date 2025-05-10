@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Settings, User, LogOut, MessageSquare } from 'lucide-react';
@@ -8,7 +9,7 @@ import { toast } from '@/components/ui/use-toast';
 
 const Profile = () => {
   const navigate = useNavigate();
-  const { user, signOut, isAdmin } = useAuth();
+  const { user, signOut, isAdmin, loading: authLoading } = useAuth();
   
   const [profileData, setProfileData] = useState({
     full_name: '',
@@ -30,6 +31,14 @@ const Profile = () => {
   
   const [submittedFeedback, setSubmittedFeedback] = useState<any[]>([]);
 
+  // Check for authentication and redirect if needed
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate('/login');
+    }
+  }, [authLoading, user, navigate]);
+
+  // Fetch user profile data
   useEffect(() => {
     const fetchUserProfile = async () => {
       if (user) {
@@ -217,9 +226,16 @@ const Profile = () => {
     }
   };
 
+  if (authLoading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-tommyfx-blue"></div>
+      </div>
+    );
+  }
+
   if (!user) {
-    navigate('/login');
-    return null;
+    return null; // This will not render anything, the redirect happens in useEffect
   }
 
   return (

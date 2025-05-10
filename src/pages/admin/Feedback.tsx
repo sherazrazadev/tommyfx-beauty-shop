@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Trash2, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
@@ -6,7 +5,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Card } from '@/components/ui/card';
 import AdminLayout from '@/components/layout/AdminLayout';
@@ -20,26 +18,34 @@ type FeedbackItem = {
   approved: boolean;
   user_name?: string;
   user_email?: string;
+  product_id?: string | null;
+  product_name?: string | null;
 };
 
 const FeedbackPage = () => {
   const [feedbackItems, setFeedbackItems] = useState<FeedbackItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterApproved, setFilterApproved] = useState(false);
-  const { isAdmin, user } = useAuth();
+  const { isAdmin, user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Wait for auth to be ready
+    if (authLoading) return;
+    
     // Redirect if not admin
-    if (!isAdmin && !loading) {
+    if (!isAdmin) {
       toast({
         title: "Access denied",
         description: "You do not have permission to access this page",
         variant: "destructive"
       });
       navigate('/');
+    } else if (user) {
+      // Only fetch feedback if user is authenticated and admin
+      fetchFeedback();
     }
-  }, [isAdmin, loading, navigate]);
+  }, [isAdmin, authLoading, user, navigate]);
 
   const fetchFeedback = async () => {
     setLoading(true);
@@ -47,7 +53,7 @@ const FeedbackPage = () => {
       // First get all feedback items
       const queryFeedback = supabase
         .from('feedback')
-        .select('*')
+        .select('*, products(name)')
         .order('created_at', { ascending: false });
         
       if (filterApproved) {
@@ -58,6 +64,8 @@ const FeedbackPage = () => {
       
       if (feedbackError) throw feedbackError;
       
+      console.log("Fetched feedback data:", feedbackData);
+      
       // If we have feedback data, get the user profiles separately
       if (feedbackData && feedbackData.length > 0) {
         // Get unique user IDs
@@ -66,7 +74,12 @@ const FeedbackPage = () => {
           .filter((id): id is string => id !== null);
           
         // Fetch profiles for these users if we have any user IDs
-        const formattedFeedback: FeedbackItem[] = [...feedbackData];
+        const formattedFeedback: FeedbackItem[] = feedbackData.map(item => ({
+          ...item,
+          product_name: item.products?.name || 'General Feedback',
+          user_name: 'Anonymous', // Default value
+          user_email: 'No email' // Default value
+        }));
         
         if (userIds.length > 0) {
           const { data: profilesData, error: profilesError } = await supabase
@@ -83,18 +96,9 @@ const FeedbackPage = () => {
               if (userProfile) {
                 item.user_name = userProfile.full_name || 'Anonymous';
                 item.user_email = userProfile.email || 'No email';
-              } else {
-                item.user_name = 'Anonymous';
-                item.user_email = 'No email';
               }
             });
           }
-        } else {
-          // Set default values for items without user_id
-          formattedFeedback.forEach(item => {
-            item.user_name = 'Anonymous';
-            item.user_email = 'No email';
-          });
         }
         
         setFeedbackItems(formattedFeedback);
@@ -114,11 +118,11 @@ const FeedbackPage = () => {
   };
   
   useEffect(() => {
-    if (user) {
+    if (user && isAdmin && !authLoading) {
       fetchFeedback();
     }
-  }, [user, filterApproved]);
-  
+  }, [user, isAdmin, authLoading, filterApproved]);
+
   const handleToggleApproval = async (id: string, currentState: boolean) => {
     try {
       const { error } = await supabase
@@ -190,12 +194,16 @@ const FeedbackPage = () => {
     return '★'.repeat(rating) + '☆'.repeat(5 - rating);
   };
   
-  if (loading) {
+  if (authLoading) {
     return (
       <div className="flex justify-center items-center h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-tommyfx-blue"></div>
       </div>
     );
+  }
+
+  if (!isAdmin) {
+    return null; // Will redirect in useEffect
   }
 
   return (
