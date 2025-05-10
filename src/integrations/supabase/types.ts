@@ -15,6 +15,7 @@ export type Database = {
           comment: string
           created_at: string | null
           id: string
+          product_id: string | null
           rating: number
           user_id: string | null
         }
@@ -23,6 +24,7 @@ export type Database = {
           comment: string
           created_at?: string | null
           id?: string
+          product_id?: string | null
           rating: number
           user_id?: string | null
         }
@@ -31,10 +33,19 @@ export type Database = {
           comment?: string
           created_at?: string | null
           id?: string
+          product_id?: string | null
           rating?: number
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "feedback_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       order_items: {
         Row: {
