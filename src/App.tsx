@@ -21,34 +21,37 @@ import ProductForm from '@/pages/admin/ProductForm';
 import Orders from '@/pages/admin/Orders';
 import OrderDetail from '@/pages/admin/OrderDetail';
 import Feedback from '@/pages/admin/Feedback';
+import Layout from './components/layout/Layout';
 
 function App() {
   return (
-    <Routes>
-      <Route path="/" element={<Home />} />
-      <Route path="/about" element={<About />} />
-      <Route path="/contact" element={<Contact />} />
-      <Route path="/product/:id" element={<ProductDetail />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/signup" element={<Signup />} />
-      <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route path="/cart" element={<Cart />} />
-      <Route path="/checkout" element={<Checkout />} />
-      <Route path="/profile" element={<Profile />} />
-      <Route path="/categories" element={<Categories />} />
-      <Route path="/categories/:categoryId" element={<CategoryProducts />} />
-      
-      {/* Admin Routes */}
-      <Route path="/admin" element={<Dashboard />} />
-      <Route path="/admin/products" element={<Products />} />
-      <Route path="/admin/products/new" element={<ProductForm />} />
-      <Route path="/admin/products/edit/:id" element={<ProductForm />} />
-      <Route path="/admin/orders" element={<Orders />} />
-      <Route path="/admin/orders/:id" element={<OrderDetail />} />
-      <Route path="/admin/feedback" element={<Feedback />} />
-      
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+    <Layout>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/contact" element={<Contact />} />
+        <Route path="/product/:id" element={<ProductDetail />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/cart" element={<Cart />} />
+        <Route path="/checkout" element={<Checkout />} />
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/categories" element={<Categories />} />
+        <Route path="/categories/:categoryId" element={<CategoryProducts />} />
+        
+        {/* Admin Routes */}
+        <Route path="/admin" element={<Dashboard />} />
+        <Route path="/admin/products" element={<Products />} />
+        <Route path="/admin/products/new" element={<ProductForm />} />
+        <Route path="/admin/products/edit/:id" element={<ProductForm />} />
+        <Route path="/admin/orders" element={<Orders />} />
+        <Route path="/admin/orders/:id" element={<OrderDetail />} />
+        <Route path="/admin/feedback" element={<Feedback />} />
+        
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </Layout>
   );
 }
 
