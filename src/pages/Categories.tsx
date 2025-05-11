@@ -63,13 +63,12 @@ const Categories = () => {
         ) : categories.length > 0 ? (
           // Render categories
           categories.map((category) => (
-            <Link key={category} to={`/categories/${category.toLowerCase()}`}>
-              <CategoryCard 
-                name={category} 
-                count={productsCount[category] || 0} 
-                image={getCategoryImage(category)}
-              />
-            </Link>
+            <CategoryCard 
+              key={category} 
+              name={category} 
+              count={productsCount[category] || 0} 
+              image={getCategoryImage(category)}
+            />
           ))
         ) : (
           <div className="col-span-full text-center py-10">

@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { 
   ChevronRight, 
   Search, 
@@ -29,6 +30,7 @@ type ProductType = {
 };
 
 const Products = () => {
+  const navigate = useNavigate();
   const [products, setProducts] = useState<ProductType[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -64,7 +66,8 @@ const Products = () => {
           // Mock stock and status since they're not in the database
           stock: Math.floor(Math.random() * 50) + 1,
           status: Math.random() > 0.2 ? 'Active' : Math.random() > 0.5 ? 'Low Stock' : 'Out of Stock',
-          image_url: product.image_url || 'https://source.unsplash.com/oG8PIWBc3nE'
+          image_url: product.image_url || 'https://source.unsplash.com/oG8PIWBc3nE',
+          description: product.description
         }));
         
         // Extract unique categories
@@ -86,6 +89,34 @@ const Products = () => {
     
     fetchProducts();
   }, []);
+
+  const handleDeleteProduct = async (id: string, name: string) => {
+    if (window.confirm(`Are you sure you want to delete ${name}? This action cannot be undone.`)) {
+      try {
+        const { error } = await supabase
+          .from('products')
+          .delete()
+          .eq('id', id);
+        
+        if (error) throw error;
+        
+        toast({
+          title: "Product Deleted",
+          description: `${name} has been deleted successfully.`
+        });
+        
+        // Update the products list without reloading
+        setProducts(products.filter(product => product.id !== id));
+      } catch (error) {
+        console.error('Error deleting product:', error);
+        toast({
+          title: "Error",
+          description: "Failed to delete product",
+          variant: "destructive"
+        });
+      }
+    }
+  };
   
   // Filter and sort products
   const filteredProducts = products
@@ -95,8 +126,8 @@ const Products = () => {
       product.name.toLowerCase().includes(searchTerm.toLowerCase())
     )
     .sort((a, b) => {
-      const aValue = a[sortField as keyof typeof a];
-      const bValue = b[sortField as keyof typeof b];
+      const aValue = a[sortField as keyof ProductType];
+      const bValue = b[sortField as keyof ProductType];
       
       if (typeof aValue === 'string' && typeof bValue === 'string') {
         return sortDirection === 'asc' 
@@ -258,8 +289,22 @@ const Products = () => {
                       </div>
                       
                       <div className="flex gap-2">
-                        <Button variant="outline" size="sm" className="flex-1">Edit</Button>
-                        <Button variant="ghost" size="sm" className="text-red-500">Delete</Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="flex-1"
+                          onClick={() => navigate(`/admin/products/edit/${product.id}`)}
+                        >
+                          Edit
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-red-500"
+                          onClick={() => handleDeleteProduct(product.id, product.name)}
+                        >
+                          Delete
+                        </Button>
                       </div>
                     </div>
                   </div>
@@ -334,13 +379,28 @@ const Products = () => {
                         </td>
                         <td className="p-3">
                           <div className="flex gap-2">
-                            <Button variant="outline" size="sm" className="p-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="p-2"
+                              onClick={() => navigate(`/product/${product.id}`)}
+                            >
                               <Eye size={16} />
                             </Button>
-                            <Button variant="outline" size="sm" className="p-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="p-2"
+                              onClick={() => navigate(`/admin/products/edit/${product.id}`)}
+                            >
                               <Edit size={16} />
                             </Button>
-                            <Button variant="outline" size="sm" className="p-2 text-red-500">
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="p-2 text-red-500"
+                              onClick={() => handleDeleteProduct(product.id, product.name)}
+                            >
                               <Trash2 size={16} />
                             </Button>
                           </div>

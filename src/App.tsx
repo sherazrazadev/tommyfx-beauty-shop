@@ -8,6 +8,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Layout from "./components/layout/Layout";
 import Home from "./pages/Home";
 import Categories from "./pages/Categories";
+import CategoryProducts from "./pages/CategoryProducts";
 import ProductDetail from "./pages/ProductDetail";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
@@ -20,6 +21,7 @@ import Contact from "./pages/Contact";
 import Dashboard from "./pages/admin/Dashboard";
 import Orders from "./pages/admin/Orders";
 import Products from "./pages/admin/Products";
+import ProductForm from "./pages/admin/ProductForm";
 import Feedback from "./pages/admin/Feedback";
 import NotFound from "./pages/NotFound";
 import { AuthProvider } from "./hooks/useAuth";
@@ -49,6 +51,7 @@ const App: React.FC = () => {
                   {/* User Routes */}
                   <Route path="/" element={<Layout><Home /></Layout>} />
                   <Route path="/categories" element={<Layout><Categories /></Layout>} />
+                  <Route path="/categories/:categoryId" element={<Layout><CategoryProducts /></Layout>} />
                   <Route path="/product/:id" element={<Layout><ProductDetail /></Layout>} />
                   <Route path="/cart" element={<Layout><Cart /></Layout>} />
                   <Route path="/checkout" element={<Layout><Checkout /></Layout>} />
@@ -63,6 +66,8 @@ const App: React.FC = () => {
                   <Route path="/admin" element={<Dashboard />} />
                   <Route path="/admin/orders" element={<Orders />} />
                   <Route path="/admin/products" element={<Products />} />
+                  <Route path="/admin/products/new" element={<ProductForm />} />
+                  <Route path="/admin/products/edit/:id" element={<ProductForm />} />
                   <Route path="/admin/feedback" element={<Feedback />} />
                   
                   {/* Catch-all Route */}
