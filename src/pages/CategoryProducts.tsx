@@ -10,13 +10,16 @@ const CategoryProducts = () => {
   const { categoryId } = useParams<{ categoryId: string }>();
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [categoryName, setCategoryName] = useState(categoryId ? categoryId.charAt(0).toUpperCase() + categoryId.slice(1) : '');
+  const [categoryName, setCategoryName] = useState(
+    categoryId ? categoryId.charAt(0).toUpperCase() + categoryId.slice(1) : ''
+  );
   
   useEffect(() => {
     const fetchProductsByCategory = async () => {
       setLoading(true);
       try {
         console.log(`Fetching products for category: ${categoryId}`);
+        
         const { data, error } = await supabase
           .from('products')
           .select('*')

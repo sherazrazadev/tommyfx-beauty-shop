@@ -17,6 +17,7 @@ type OrderItemType = {
   order_id: string;
 };
 
+// Extended type for order with customer information
 type OrderType = {
   id: string;
   user_id: string;
@@ -29,8 +30,8 @@ type OrderType = {
   shipping_country: string;
   created_at: string;
   payment_method: string;
-  customer_email?: string;
-  customer_name?: string;
+  customer_email?: string; // Optional field added during data processing
+  customer_name?: string; // Optional field added during data processing
 };
 
 const OrderDetail = () => {
@@ -61,12 +62,19 @@ const OrderDetail = () => {
         
         console.log("Order fetched:", orderData);
         
+        // Create a mutable copy of the order to add customer information
+        const orderWithCustomer: OrderType = {
+          ...orderData,
+          customer_email: undefined,
+          customer_name: undefined
+        };
+        
         // Fetch user profile
-        if (orderData.user_id) {
+        if (orderWithCustomer.user_id) {
           const { data: profileData, error: profileError } = await supabase
             .from('profiles')
             .select('email, full_name')
-            .eq('id', orderData.user_id)
+            .eq('id', orderWithCustomer.user_id)
             .single();
             
           if (profileError && profileError.code !== 'PGRST116') {
@@ -74,12 +82,12 @@ const OrderDetail = () => {
           }
           
           if (profileData) {
-            orderData.customer_email = profileData.email;
-            orderData.customer_name = profileData.full_name || 'Unknown';
+            orderWithCustomer.customer_email = profileData.email;
+            orderWithCustomer.customer_name = profileData.full_name || 'Unknown';
           }
         }
         
-        setOrder(orderData);
+        setOrder(orderWithCustomer);
         
         // Fetch order items
         const { data: itemsData, error: itemsError } = await supabase
