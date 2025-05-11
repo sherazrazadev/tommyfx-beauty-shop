@@ -7,6 +7,16 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import AdminLayout from '@/components/layout/AdminLayout';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type OrderItemType = {
   id: string;
@@ -41,6 +51,8 @@ const OrderDetail = () => {
   const [orderItems, setOrderItems] = useState<OrderItemType[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [statusChangeDialogOpen, setStatusChangeDialogOpen] = useState(false);
+  const [newStatus, setNewStatus] = useState<string>('');
 
   useEffect(() => {
     const fetchOrderDetails = async () => {
@@ -120,8 +132,13 @@ const OrderDetail = () => {
     }
   }, [id]);
 
-  const handleStatusUpdate = async (newStatus: string) => {
-    if (!order) return;
+  const promptStatusUpdate = (status: string) => {
+    setNewStatus(status);
+    setStatusChangeDialogOpen(true);
+  };
+
+  const handleStatusUpdate = async () => {
+    if (!order || !newStatus) return;
     
     setUpdatingStatus(true);
     try {
@@ -138,6 +155,9 @@ const OrderDetail = () => {
         title: "Status Updated",
         description: `Order status changed to ${newStatus}`,
       });
+
+      // Close the dialog
+      setStatusChangeDialogOpen(false);
     } catch (error) {
       console.error('Error updating status:', error);
       toast({
@@ -178,6 +198,17 @@ const OrderDetail = () => {
       default:
         return <Truck className="h-5 w-5 text-gray-500" />;
     }
+  };
+
+  const getStatusChangeMessage = () => {
+    if (newStatus === 'processing') {
+      return "This will mark the order as being processed. Proceed?";
+    } else if (newStatus === 'delivered') {
+      return "This will mark the order as delivered. Proceed?";
+    } else if (newStatus === 'cancelled') {
+      return "This will cancel the order. This action cannot be undone. Proceed?";
+    }
+    return `Change status to ${newStatus}?`;
   };
 
   return (
@@ -231,7 +262,7 @@ const OrderDetail = () => {
                       <>
                         <Button 
                           size="sm" 
-                          onClick={() => handleStatusUpdate('processing')}
+                          onClick={() => promptStatusUpdate('processing')}
                           disabled={updatingStatus}
                         >
                           Process
@@ -240,7 +271,7 @@ const OrderDetail = () => {
                           size="sm" 
                           variant="outline" 
                           className="text-red-500"
-                          onClick={() => handleStatusUpdate('cancelled')}
+                          onClick={() => promptStatusUpdate('cancelled')}
                           disabled={updatingStatus}
                         >
                           Cancel
@@ -250,7 +281,7 @@ const OrderDetail = () => {
                     {order.status === 'processing' && (
                       <Button 
                         size="sm" 
-                        onClick={() => handleStatusUpdate('delivered')}
+                        onClick={() => promptStatusUpdate('delivered')}
                         disabled={updatingStatus}
                       >
                         Mark Delivered
@@ -357,6 +388,28 @@ const OrderDetail = () => {
           </div>
         )}
       </div>
+
+      {/* Status Update Confirmation Dialog */}
+      <AlertDialog open={statusChangeDialogOpen} onOpenChange={setStatusChangeDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Update Order Status</AlertDialogTitle>
+            <AlertDialogDescription>
+              {getStatusChangeMessage()}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={updatingStatus}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleStatusUpdate}
+              disabled={updatingStatus}
+              className={newStatus === 'cancelled' ? 'bg-red-600 hover:bg-red-700' : ''}
+            >
+              {updatingStatus ? 'Updating...' : 'Confirm'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AdminLayout>
   );
 };

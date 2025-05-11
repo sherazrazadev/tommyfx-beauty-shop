@@ -21,6 +21,18 @@ import { supabase } from '@/integrations/supabase/client';
 import { useCart } from '@/hooks/useCart';
 import { useAuth } from '@/hooks/useAuth';
 import ReviewDialog from '@/components/reviews/ReviewDialog';
+import { useWishlist } from '@/components/wishlist/useWishlist'; 
+import SocialShareButtons from '@/components/sharing/SocialShareButtons';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -30,8 +42,10 @@ const ProductDetail = () => {
   const [reviews, setReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const { addToCart } = useCart();
   const { user } = useAuth();
+  const { addToWishlist, isInWishlist, removeFromWishlist } = useWishlist();
   
   useEffect(() => {
     const fetchProduct = async () => {
@@ -168,6 +182,21 @@ const ProductDetail = () => {
     setReviewDialogOpen(true);
   };
 
+  const handleWishlist = () => {
+    if (!product) return;
+    
+    if (isInWishlist(product.id)) {
+      removeFromWishlist(product.id);
+    } else {
+      addToWishlist({
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        image: product.image_url || product.images[0]
+      });
+    }
+  };
+
   // Show loading state
   if (loading) {
     return (
@@ -197,6 +226,9 @@ const ProductDetail = () => {
   // Calculate average rating
   const averageRating = reviews.length > 0 ? 
     reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length : 0;
+
+  // Current page URL for sharing
+  const currentPageUrl = window.location.href;
 
   return (
     <div>
@@ -308,12 +340,26 @@ const ProductDetail = () => {
                   >
                     <ShoppingCart size={18} className="mr-2" /> Add to Cart
                   </Button>
-                  <Button variant="outline" className="btn-outline flex items-center justify-center">
-                    <Heart size={18} className="mr-2" /> Add to Wishlist
+                  <Button 
+                    variant="outline" 
+                    className={`btn-outline flex items-center justify-center ${
+                      isInWishlist(product.id) ? "bg-gray-100" : ""
+                    }`}
+                    onClick={handleWishlist}
+                  >
+                    <Heart 
+                      size={18} 
+                      className={`mr-2 ${isInWishlist(product.id) ? "fill-tommyfx-blue text-tommyfx-blue" : ""}`} 
+                    /> 
+                    {isInWishlist(product.id) ? "In Wishlist" : "Add to Wishlist"}
                   </Button>
                 </div>
                 
-                <Button variant="ghost" className="mt-3 text-gray-600">
+                <Button 
+                  variant="ghost" 
+                  className="mt-3 text-gray-600"
+                  onClick={() => setShareDialogOpen(true)}
+                >
                   <Share2 size={18} className="mr-2" /> Share
                 </Button>
               </div>
@@ -446,6 +492,29 @@ const ProductDetail = () => {
         productId={id || ''}
         productName={product.name}
       />
+
+      {/* Share Dialog */}
+      <AlertDialog open={shareDialogOpen} onOpenChange={setShareDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Share this product</AlertDialogTitle>
+            <AlertDialogDescription>
+              Choose how you'd like to share {product.name}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-4">
+            <SocialShareButtons
+              url={currentPageUrl}
+              title={product.name}
+              description={product.description}
+              image={product.images[0]}
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Close</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
