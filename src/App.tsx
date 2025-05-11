@@ -13,6 +13,7 @@ import Checkout from '@/pages/Checkout';
 import Profile from '@/pages/Profile';
 import Categories from '@/pages/Categories';
 import CategoryProducts from '@/pages/CategoryProducts';
+import Wishlist from '@/pages/Wishlist';
 
 // Admin Routes
 import Dashboard from '@/pages/admin/Dashboard';
@@ -43,6 +44,7 @@ function App() {
           <Route path="/profile" element={<Profile />} />
           <Route path="/categories" element={<Categories />} />
           <Route path="/categories/:categoryId" element={<CategoryProducts />} />
+          <Route path="/wishlist" element={<Wishlist />} />
           
           {/* Admin Routes */}
           <Route path="/admin" element={<Dashboard />} />

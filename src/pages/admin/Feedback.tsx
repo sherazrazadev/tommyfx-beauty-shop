@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Trash2, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
@@ -247,6 +248,11 @@ const FeedbackPage = () => {
                       </div>
                     </div>
                     <p className="mt-2 text-sm text-gray-700">{formatDate(item.created_at)}</p>
+                    {item.product_name && (
+                      <span className="inline-block bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded mt-1">
+                        Product: {item.product_name}
+                      </span>
+                    )}
                     <div className="mt-3 p-3 bg-gray-50 rounded-md">
                       <p className="italic">"{item.comment}"</p>
                     </div>

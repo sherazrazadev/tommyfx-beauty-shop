@@ -40,6 +40,7 @@ const TestimonialSection = () => {
         if (error) throw error;
         
         console.log("Feedback entries fetched:", data?.length || 0);
+        console.log("Approved feedback data:", data);
 
         // Fetch user profiles separately to avoid relation errors
         let mappedTestimonials: Testimonial[] = (data || []).map(item => ({

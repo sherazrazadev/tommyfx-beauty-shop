@@ -100,10 +100,13 @@ const ProductDetail = () => {
       const { data: feedbackData, error: feedbackError } = await supabase
         .from('feedback')
         .select('*')
+        .eq('product_id', productId)
         .eq('approved', true)
         .order('created_at', { ascending: false });
         
       if (feedbackError) throw feedbackError;
+      
+      console.log("Fetched reviews for product:", feedbackData);
       
       if (feedbackData && feedbackData.length > 0) {
         // Get user profiles for these reviews
@@ -142,6 +145,7 @@ const ProductDetail = () => {
         });
         
         setReviews(formattedReviews);
+        console.log("Formatted reviews:", formattedReviews);
       } else {
         // If no reviews, set an empty array
         setReviews([]);
@@ -159,13 +163,14 @@ const ProductDetail = () => {
       addToCart({
         id: product.id,
         name: product.name,
-        price: product.price,
+        price: product.discount_price ? product.discount_price : product.price,
         image: product.image_url,
         quantity
       });
       toast({
         title: "Added to cart",
         description: `${quantity} x ${product.name} added to your cart`,
+        variant: "default"
       });
     }
   };
@@ -187,13 +192,28 @@ const ProductDetail = () => {
     
     if (isInWishlist(product.id)) {
       removeFromWishlist(product.id);
+      toast({
+        title: "Removed from wishlist",
+        description: `${product.name} has been removed from your wishlist`,
+      });
     } else {
       addToWishlist({
         id: product.id,
         name: product.name,
-        price: product.price,
+        price: product.discount_price ? product.discount_price : product.price,
         image: product.image_url || product.images[0]
       });
+      toast({
+        title: "Added to wishlist",
+        description: `${product.name} has been added to your wishlist`,
+      });
+    }
+  };
+
+  const handleReviewSubmitted = async () => {
+    // After a review is submitted, fetch the reviews again
+    if (id) {
+      await fetchReviews(id);
     }
   };
 
@@ -230,6 +250,11 @@ const ProductDetail = () => {
   // Current page URL for sharing
   const currentPageUrl = window.location.href;
 
+  // Calculate discount percentage if both prices are available
+  const discountPercentage = product.discount_price && product.price && product.price > 0
+    ? Math.round(((product.price - product.discount_price) / product.price) * 100)
+    : null;
+
   return (
     <div>
       {/* Breadcrumb */}
@@ -258,6 +283,11 @@ const ProductDetail = () => {
             {/* Product Images */}
             <div>
               <div className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden mb-4">
+                {discountPercentage && (
+                  <div className="absolute top-4 left-4 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-md z-10">
+                    -{discountPercentage}%
+                  </div>
+                )}
                 <img
                   src={product.images[activeImageIndex]}
                   alt={product.name}
@@ -306,7 +336,14 @@ const ProductDetail = () => {
                 </span>
               </div>
               
-              <p className="text-2xl font-bold mb-6">${product.price.toFixed(2)}</p>
+              {product.discount_price ? (
+                <div className="mb-6">
+                  <p className="text-2xl font-bold text-tommyfx-blue">${product.discount_price.toFixed(2)}</p>
+                  <p className="text-gray-500 line-through">${product.price.toFixed(2)}</p>
+                </div>
+              ) : (
+                <p className="text-2xl font-bold mb-6">${product.price.toFixed(2)}</p>
+              )}
               
               <p className="text-gray-700 mb-6">{product.description}</p>
               
@@ -491,6 +528,7 @@ const ProductDetail = () => {
         onClose={() => setReviewDialogOpen(false)}
         productId={id || ''}
         productName={product.name}
+        onReviewSubmitted={handleReviewSubmitted}
       />
 
       {/* Share Dialog */}

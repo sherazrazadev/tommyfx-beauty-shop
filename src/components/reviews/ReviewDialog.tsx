@@ -14,9 +14,16 @@ interface ReviewDialogProps {
   onClose: () => void;
   productId: string;
   productName: string;
+  onReviewSubmitted?: () => void;
 }
 
-const ReviewDialog: React.FC<ReviewDialogProps> = ({ isOpen, onClose, productId, productName }) => {
+const ReviewDialog: React.FC<ReviewDialogProps> = ({ 
+  isOpen, 
+  onClose, 
+  productId, 
+  productName,
+  onReviewSubmitted 
+}) => {
   const [rating, setRating] = useState<number>(5);
   const [comment, setComment] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -71,6 +78,12 @@ const ReviewDialog: React.FC<ReviewDialogProps> = ({ isOpen, onClose, productId,
       // Reset form and close dialog
       setRating(5);
       setComment('');
+      
+      // Call the callback if provided
+      if (onReviewSubmitted) {
+        onReviewSubmitted();
+      }
+      
       onClose();
       
     } catch (error) {
