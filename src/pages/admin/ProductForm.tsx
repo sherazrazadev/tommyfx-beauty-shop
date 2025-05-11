@@ -128,10 +128,14 @@ const ProductForm = () => {
         throw new Error('Please enter a valid price');
       }
       
+      // Fix: Convert Date object to ISO string for updated_at
       const productData = {
-        ...formData,
+        name: formData.name,
         price,
-        updated_at: new Date()
+        category: formData.category,
+        description: formData.description,
+        image_url: formData.image_url,
+        updated_at: new Date().toISOString()
       };
       
       let result;

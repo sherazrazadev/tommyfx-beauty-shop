@@ -20,7 +20,7 @@ const CategoryProducts = () => {
         const { data, error } = await supabase
           .from('products')
           .select('*')
-          .ilike('category', `%${categoryId}%`);
+          .ilike('category', categoryId || '');
           
         if (error) {
           console.error("Error fetching products:", error);

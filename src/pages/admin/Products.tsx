@@ -62,7 +62,7 @@ const Products = () => {
           id: product.id,
           name: product.name,
           category: product.category || 'Uncategorized',
-          price: parseFloat(product.price),
+          price: parseFloat(product.price.toString()),
           // Mock stock and status since they're not in the database
           stock: Math.floor(Math.random() * 50) + 1,
           status: Math.random() > 0.2 ? 'Active' : Math.random() > 0.5 ? 'Low Stock' : 'Out of Stock',
