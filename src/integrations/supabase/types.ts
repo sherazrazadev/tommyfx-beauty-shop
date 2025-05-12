@@ -142,30 +142,39 @@ export type Database = {
           category: string | null
           created_at: string | null
           description: string | null
+          discount_percent: number | null
           id: string
           image_url: string | null
           name: string
+          original_price: number | null
           price: number
+          stock: number | null
           updated_at: string | null
         }
         Insert: {
           category?: string | null
           created_at?: string | null
           description?: string | null
+          discount_percent?: number | null
           id?: string
           image_url?: string | null
           name: string
+          original_price?: number | null
           price: number
+          stock?: number | null
           updated_at?: string | null
         }
         Update: {
           category?: string | null
           created_at?: string | null
           description?: string | null
+          discount_percent?: number | null
           id?: string
           image_url?: string | null
           name?: string
+          original_price?: number | null
           price?: number
+          stock?: number | null
           updated_at?: string | null
         }
         Relationships: []

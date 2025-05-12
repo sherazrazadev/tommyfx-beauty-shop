@@ -1,222 +1,203 @@
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Mail, Phone, MapPin, Calendar, Search, RefreshCw } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
-import { toast } from '@/components/ui/use-toast';
+import { Link } from 'react-router-dom';
+import { ChevronRight, Search, MoreHorizontal, UserIcon, Phone, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Skeleton } from '@/components/ui/skeleton';
+import { toast } from '@/components/ui/use-toast';
 import AdminLayout from '@/components/layout/AdminLayout';
+import { supabase } from '@/integrations/supabase/client';
 
-type CustomerProfile = {
+interface Customer {
   id: string;
-  email: string;
   full_name: string | null;
+  email: string | null;
   phone: string | null;
-  address: string | null;
-  city: string | null;
-  state: string | null;
-  zip: string | null;
+  created_at: string | null;
   country: string | null;
-  created_at: string;
   role: string;
-};
+}
 
-const CustomersPage = () => {
-  const [customers, setCustomers] = useState<CustomerProfile[]>([]);
+const Customers = () => {
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const { isAdmin, user, loading: authLoading } = useAuth();
-  const navigate = useNavigate();
 
   useEffect(() => {
-    // Wait for auth to be ready
-    if (authLoading) return;
-    
-    // Redirect if not admin
-    if (!isAdmin) {
-      toast({
-        title: "Access denied",
-        description: "You do not have permission to access this page",
-        variant: "destructive"
-      });
-      navigate('/');
-    } else if (user) {
-      fetchCustomers();
-    }
-  }, [isAdmin, authLoading, user, navigate]);
-
-  const fetchCustomers = async () => {
-    setLoading(true);
-    try {
-      // Get all profiles
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) {
-        throw error;
+    const fetchCustomers = async () => {
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .order('created_at', { ascending: false });
+          
+        if (error) {
+          throw error;
+        }
+        
+        setCustomers(data as Customer[]);
+        setFilteredCustomers(data as Customer[]);
+      } catch (error) {
+        console.error('Error fetching customers:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load customer data',
+          variant: 'destructive'
+        });
+      } finally {
+        setLoading(false);
       }
-      
-      setCustomers(data || []);
-    } catch (error) {
-      console.error('Error fetching customers:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load customer data",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+    
+    fetchCustomers();
+  }, []);
 
-  // Filter customers based on search query
-  const filteredCustomers = searchQuery
-    ? customers.filter(
-        customer => 
-          (customer.full_name && customer.full_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
-          (customer.email && customer.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
-          (customer.phone && customer.phone.toLowerCase().includes(searchQuery.toLowerCase())) ||
-          (customer.city && customer.city.toLowerCase().includes(searchQuery.toLowerCase()))
-      )
-    : customers;
+  useEffect(() => {
+    if (searchTerm) {
+      const filtered = customers.filter(customer => 
+        (customer.full_name?.toLowerCase().includes(searchTerm.toLowerCase())) || 
+        (customer.email?.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (customer.phone?.includes(searchTerm))
+      );
+      setFilteredCustomers(filtered);
+    } else {
+      setFilteredCustomers(customers);
+    }
+  }, [searchTerm, customers]);
 
   const formatDate = (dateString: string | null) => {
-    if (!dateString) return "N/A";
-    return new Date(dateString).toLocaleDateString();
+    if (!dateString) return 'Unknown';
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    }).format(date);
   };
-
-  if (authLoading) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-tommyfx-blue"></div>
-      </div>
-    );
-  }
-
-  if (!isAdmin) {
-    return null; // Will redirect in useEffect
-  }
 
   return (
     <AdminLayout>
-      <div className="p-6">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-          <h1 className="text-2xl font-bold mb-4 md:mb-0">Customers</h1>
-          
-          <div className="flex gap-3 w-full md:w-auto">
-            <div className="relative w-full md:w-64">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
-              <Input
-                placeholder="Search customers..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8"
-              />
-            </div>
-            
-            <Button variant="outline" size="sm" onClick={fetchCustomers} className="flex gap-1 items-center">
-              <RefreshCw className="h-4 w-4" />
-              Refresh
-            </Button>
+      <div className="px-6 py-8">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold">Customers</h1>
+          <div className="flex items-center text-sm text-gray-500">
+            <Link to="/admin" className="hover:text-tommyfx-blue">Admin</Link>
+            <ChevronRight size={16} className="mx-2" />
+            <span>Customers</span>
           </div>
         </div>
-
-        <Card>
-          <div className="overflow-x-auto">
+        
+        <div className="flex justify-between items-center mb-6">
+          <div className="relative w-full max-w-sm">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+            <Input
+              type="text"
+              placeholder="Search customers..."
+              className="pl-10"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+        </div>
+        
+        {loading ? (
+          <div className="space-y-4">
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+          </div>
+        ) : (
+          <div className="bg-white rounded-lg shadow-sm overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Customer</TableHead>
-                  <TableHead>Contact</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead>Joined</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Phone</TableHead>
+                  <TableHead>Country</TableHead>
                   <TableHead>Role</TableHead>
+                  <TableHead>Joined</TableHead>
+                  <TableHead className="w-14"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {loading ? (
-                  Array(5).fill(0).map((_, i) => (
-                    <TableRow key={i} className="animate-pulse">
-                      <TableCell><div className="h-4 bg-gray-100 rounded w-32"></div></TableCell>
-                      <TableCell><div className="h-4 bg-gray-100 rounded w-40"></div></TableCell>
-                      <TableCell><div className="h-4 bg-gray-100 rounded w-36"></div></TableCell>
-                      <TableCell><div className="h-4 bg-gray-100 rounded w-24"></div></TableCell>
-                      <TableCell><div className="h-4 bg-gray-100 rounded w-16"></div></TableCell>
-                    </TableRow>
-                  ))
-                ) : filteredCustomers.length > 0 ? (
+                {filteredCustomers.length > 0 ? (
                   filteredCustomers.map((customer) => (
                     <TableRow key={customer.id}>
-                      <TableCell>
-                        <div className="font-medium">{customer.full_name || 'No name'}</div>
-                        <div className="text-sm text-gray-500">{customer.email}</div>
+                      <TableCell className="flex items-center">
+                        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center mr-3">
+                          <UserIcon size={16} className="text-gray-600" />
+                        </div>
+                        <span className="font-medium">
+                          {customer.full_name || 'Anonymous User'}
+                        </span>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2 text-sm">
-                          <Phone size={14} className="text-gray-500" />
-                          <span>{customer.phone || 'No phone'}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm mt-1">
-                          <Mail size={14} className="text-gray-500" />
-                          <span>{customer.email}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-start gap-2 text-sm">
-                          <MapPin size={14} className="text-gray-500 mt-0.5" />
-                          <div>
-                            {customer.city && (
-                              <div>{customer.city}, {customer.state || ''}</div>
-                            )}
-                            <div>{customer.country || 'Unknown location'}</div>
-                          </div>
+                        <div className="flex items-center">
+                          <Mail size={14} className="mr-2 text-gray-500" />
+                          {customer.email || 'Not provided'}
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2 text-sm">
-                          <Calendar size={14} className="text-gray-500" />
-                          <span>{formatDate(customer.created_at)}</span>
+                        <div className="flex items-center">
+                          <Phone size={14} className="mr-2 text-gray-500" />
+                          {customer.phone || 'Not provided'}
                         </div>
                       </TableCell>
+                      <TableCell>{customer.country || 'Not provided'}</TableCell>
                       <TableCell>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        <span className={`px-2 py-1 rounded-full text-xs ${
                           customer.role === 'admin' 
                             ? 'bg-purple-100 text-purple-800' 
-                            : 'bg-gray-100 text-gray-800'
+                            : 'bg-blue-100 text-blue-800'
                         }`}>
                           {customer.role}
                         </span>
+                      </TableCell>
+                      <TableCell>{formatDate(customer.created_at)}</TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreHorizontal size={16} />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem>View Profile</DropdownMenuItem>
+                            <DropdownMenuItem>View Orders</DropdownMenuItem>
+                            <DropdownMenuItem className="text-red-600">
+                              Disable Account
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={5} className="h-32 text-center">
+                    <TableCell colSpan={7} className="text-center py-6">
                       No customers found
+                      {searchTerm && ' matching your search criteria'}
                     </TableCell>
                   </TableRow>
                 )}
               </TableBody>
             </Table>
           </div>
-        </Card>
+        )}
       </div>
     </AdminLayout>
   );
 };
 
-export default CustomersPage;
+export default Customers;

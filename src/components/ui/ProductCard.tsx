@@ -9,9 +9,21 @@ interface ProductCardProps {
   price: number;
   image: string;
   category?: string;
+  originalPrice?: number;
+  discountPercent?: number;
 }
 
-const ProductCard: React.FC<ProductCardProps> = ({ id, name, price, image, category }) => {
+const ProductCard: React.FC<ProductCardProps> = ({ 
+  id, 
+  name, 
+  price, 
+  image, 
+  category, 
+  originalPrice,
+  discountPercent 
+}) => {
+  const hasDiscount = originalPrice && discountPercent && originalPrice > price;
+
   return (
     <div className="group relative card-shadow rounded-md overflow-hidden bg-white animate-zoom-in">
       {/* Product Image with Hover Effect */}
@@ -31,6 +43,12 @@ const ProductCard: React.FC<ProductCardProps> = ({ id, name, price, image, categ
               {category}
             </span>
           )}
+
+          {hasDiscount && (
+            <span className="absolute bottom-4 left-4 bg-red-500 px-2 py-1 text-xs text-white rounded-full">
+              {Math.round(discountPercent)}% OFF
+            </span>
+          )}
         </div>
       </Link>
       
@@ -42,7 +60,12 @@ const ProductCard: React.FC<ProductCardProps> = ({ id, name, price, image, categ
           </h3>
         </Link>
         
-        <p className="text-lg font-medium">${price.toFixed(2)}</p>
+        <div className="flex items-center">
+          <p className="text-lg font-medium">${price.toFixed(2)}</p>
+          {hasDiscount && (
+            <p className="ml-2 text-sm text-gray-500 line-through">${originalPrice.toFixed(2)}</p>
+          )}
+        </div>
         
         {/* Quick Shop Button that appears on hover */}
         <div className="mt-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
