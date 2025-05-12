@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ChevronRight, ArrowLeft, Clock, CheckCircle2, XCircle, Truck, BoxIcon } from 'lucide-react';
+import { ChevronRight, ArrowLeft, Clock, CheckCircle2, XCircle, Truck, BoxIcon, Phone, Mail, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/use-toast';
@@ -40,8 +40,9 @@ type OrderType = {
   shipping_country: string;
   created_at: string;
   payment_method: string;
-  customer_email?: string; // Optional field added during data processing
-  customer_name?: string; // Optional field added during data processing
+  customer_email?: string;
+  customer_name?: string;
+  customer_phone?: string;
 };
 
 const OrderDetail = () => {
@@ -78,14 +79,15 @@ const OrderDetail = () => {
         const orderWithCustomer: OrderType = {
           ...orderData,
           customer_email: undefined,
-          customer_name: undefined
+          customer_name: undefined,
+          customer_phone: undefined
         };
         
         // Fetch user profile
         if (orderWithCustomer.user_id) {
           const { data: profileData, error: profileError } = await supabase
             .from('profiles')
-            .select('email, full_name')
+            .select('email, full_name, phone')
             .eq('id', orderWithCustomer.user_id)
             .single();
             
@@ -96,6 +98,7 @@ const OrderDetail = () => {
           if (profileData) {
             orderWithCustomer.customer_email = profileData.email;
             orderWithCustomer.customer_name = profileData.full_name || 'Unknown';
+            orderWithCustomer.customer_phone = profileData.phone || 'No phone number';
           }
         }
         
@@ -291,32 +294,48 @@ const OrderDetail = () => {
                 </div>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
                 {/* Customer Info */}
                 <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-2">Customer</h3>
-                  <p className="font-medium">{order.customer_name || 'Unknown'}</p>
-                  <p className="text-sm">{order.customer_email || 'No email'}</p>
+                  <h3 className="text-sm font-medium text-gray-500 mb-2">Customer Information</h3>
+                  <div className="space-y-2">
+                    <p className="flex gap-2 items-center">
+                      <span className="font-medium">{order.customer_name || 'Unknown'}</span>
+                    </p>
+                    <p className="flex gap-2 items-center">
+                      <Mail size={16} className="text-gray-500" />
+                      <span>{order.customer_email || 'No email'}</span>
+                    </p>
+                    <p className="flex gap-2 items-center">
+                      <Phone size={16} className="text-gray-500" />
+                      <span>{order.customer_phone || 'No phone number'}</span>
+                    </p>
+                  </div>
                 </div>
                 
                 {/* Shipping Address */}
                 <div>
                   <h3 className="text-sm font-medium text-gray-500 mb-2">Ship To</h3>
-                  <p>{order.shipping_address}</p>
-                  <p>{order.shipping_city}, {order.shipping_state} {order.shipping_zip}</p>
-                  <p>{order.shipping_country}</p>
+                  <div className="flex gap-2">
+                    <MapPin size={16} className="text-gray-500 mt-1 flex-shrink-0" />
+                    <div>
+                      <p>{order.shipping_address}</p>
+                      <p>{order.shipping_city}, {order.shipping_state} {order.shipping_zip}</p>
+                      <p>{order.shipping_country}</p>
+                    </div>
+                  </div>
                 </div>
                 
-                {/* Payment Method */}
                 <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-2">Payment Method</h3>
-                  <p className="capitalize">{order.payment_method?.replace(/_/g, ' ')}</p>
-                </div>
-                
-                {/* Order Total */}
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-2">Order Total</h3>
-                  <p className="text-lg font-bold">${order.total_amount.toFixed(2)}</p>
+                  <div className="mb-4">
+                    <h3 className="text-sm font-medium text-gray-500 mb-2">Payment Method</h3>
+                    <p className="capitalize">{order.payment_method?.replace(/_/g, ' ')}</p>
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500 mb-2">Order Total</h3>
+                    <p className="text-lg font-bold">${order.total_amount.toFixed(2)}</p>
+                  </div>
                 </div>
               </div>
             </div>

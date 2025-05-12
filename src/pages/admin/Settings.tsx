@@ -1,4 +1,3 @@
-
 import React from 'react';
 import AdminLayout from '@/components/layout/AdminLayout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -15,6 +14,7 @@ import { z } from 'zod';
 import { toast } from '@/components/ui/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const storeSettingsSchema = z.object({
   storeName: z.string().min(2, { message: "Store name must be at least 2 characters." }),
@@ -500,7 +500,7 @@ const SettingsPage = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label>Headings Font</Label>
-                        <Select>
+                        <Select defaultValue="inter">
                           <SelectTrigger>
                             <SelectValue placeholder="Select font">Inter</SelectValue>
                           </SelectTrigger>
@@ -516,7 +516,7 @@ const SettingsPage = () => {
                       
                       <div className="space-y-2">
                         <Label>Body Font</Label>
-                        <Select>
+                        <Select defaultValue="inter">
                           <SelectTrigger>
                             <SelectValue placeholder="Select font">Inter</SelectValue>
                           </SelectTrigger>
@@ -544,13 +544,5 @@ const SettingsPage = () => {
     </AdminLayout>
   );
 };
-
-// This is needed for the type error from shadcn/ui's Select component
-const SelectTrigger = ({ children }: { children: React.ReactNode }) => <div>{children}</div>;
-const SelectValue = ({ placeholder, children }: { placeholder?: string, children?: React.ReactNode }) => 
-  <div>{children || placeholder}</div>;
-const SelectContent = ({ children }: { children: React.ReactNode }) => <div>{children}</div>;
-const SelectItem = ({ value, children }: { value: string, children: React.ReactNode }) => 
-  <div>{children}</div>;
 
 export default SettingsPage;

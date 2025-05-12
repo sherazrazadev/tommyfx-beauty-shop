@@ -37,12 +37,14 @@ const TestimonialSection = () => {
           .order('created_at', { ascending: false })
           .limit(10);
 
-        if (error) throw error;
+        if (error) {
+          console.error("Error fetching testimonials:", error);
+          throw error;
+        }
         
         console.log("Feedback entries fetched:", data?.length || 0);
-        console.log("Approved feedback data:", data);
-
-        // Fetch user profiles separately to avoid relation errors
+        
+        // Map the data to the Testimonial type
         let mappedTestimonials: Testimonial[] = (data || []).map(item => ({
           id: item.id,
           author: 'Anonymous Customer', // Default name, will update if profile found
@@ -55,7 +57,7 @@ const TestimonialSection = () => {
         // If we have user IDs, fetch their profiles
         const userIds = data
           ?.map(item => item.user_id)
-          .filter(id => id != null) as string[];
+          .filter((id): id is string => id != null);
 
         if (userIds && userIds.length > 0) {
           console.log("Fetching user profiles for testimonials...");
@@ -64,8 +66,9 @@ const TestimonialSection = () => {
             .select('id, full_name')
             .in('id', userIds);
 
-          if (!profilesError && profilesData) {
-            console.log("Profiles fetched for testimonials:", profilesData.length);
+          if (profilesError) {
+            console.error("Error fetching profiles:", profilesError);
+          } else if (profilesData) {
             // Create a lookup map for profiles
             const profileMap: Record<string, { full_name: string }> = {};
             profilesData.forEach(profile => {
@@ -90,6 +93,7 @@ const TestimonialSection = () => {
         setTestimonials(mappedTestimonials);
       } catch (error) {
         console.error('Error fetching testimonials:', error);
+        setTestimonials([]);
       } finally {
         setLoading(false);
       }
@@ -130,11 +134,8 @@ const TestimonialSection = () => {
       </div>
     );
   }
-
-  if (testimonials.length === 0) {
-    return null; // Don't show section if no testimonials
-  }
-
+  
+  // Show section even if there are no testimonials
   return (
     <div className="bg-white py-16">
       <div className="container-custom">
@@ -143,42 +144,48 @@ const TestimonialSection = () => {
           <p className="text-gray-600">What our customers are saying</p>
         </div>
         
-        <div className="relative">
-          {/* Scroll buttons */}
-          <button
-            onClick={scrollLeft}
-            className="absolute left-0 top-1/2 transform -translate-y-1/2 z-10 bg-white rounded-full shadow-md p-2 hover:bg-gray-100 focus:outline-none"
-            aria-label="Scroll left"
-          >
-            <ChevronLeft size={24} />
-          </button>
-          
-          {/* Testimonials horizontal scroll */}
-          <div 
-            ref={scrollContainerRef}
-            className="flex overflow-x-auto gap-5 pb-4 scrollbar-hide scroll-smooth snap-x"
-            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-          >
-            {testimonials.map((testimonial) => (
-              <div key={testimonial.id} className="flex-shrink-0 snap-start" style={{ width: '350px' }}>
-                <TestimonialCard
-                  name={testimonial.author}
-                  rating={testimonial.rating}
-                  comment={testimonial.content}
-                  date={testimonial.role}
-                />
-              </div>
-            ))}
+        {testimonials.length > 0 ? (
+          <div className="relative">
+            {/* Scroll buttons */}
+            <button
+              onClick={scrollLeft}
+              className="absolute left-0 top-1/2 transform -translate-y-1/2 z-10 bg-white rounded-full shadow-md p-2 hover:bg-gray-100 focus:outline-none"
+              aria-label="Scroll left"
+            >
+              <ChevronLeft size={24} />
+            </button>
+            
+            {/* Testimonials horizontal scroll */}
+            <div 
+              ref={scrollContainerRef}
+              className="flex overflow-x-auto gap-5 pb-4 scrollbar-hide scroll-smooth snap-x"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+            >
+              {testimonials.map((testimonial) => (
+                <div key={testimonial.id} className="flex-shrink-0 snap-start" style={{ width: '350px' }}>
+                  <TestimonialCard
+                    name={testimonial.author}
+                    rating={testimonial.rating}
+                    comment={testimonial.content}
+                    date={testimonial.role}
+                  />
+                </div>
+              ))}
+            </div>
+            
+            <button
+              onClick={scrollRight}
+              className="absolute right-0 top-1/2 transform -translate-y-1/2 z-10 bg-white rounded-full shadow-md p-2 hover:bg-gray-100 focus:outline-none"
+              aria-label="Scroll right"
+            >
+              <ChevronRight size={24} />
+            </button>
           </div>
-          
-          <button
-            onClick={scrollRight}
-            className="absolute right-0 top-1/2 transform -translate-y-1/2 z-10 bg-white rounded-full shadow-md p-2 hover:bg-gray-100 focus:outline-none"
-            aria-label="Scroll right"
-          >
-            <ChevronRight size={24} />
-          </button>
-        </div>
+        ) : (
+          <div className="text-center py-8 bg-gray-50 rounded-lg">
+            <p className="text-gray-500">No approved testimonials yet. Be the first to leave one!</p>
+          </div>
+        )}
       </div>
     </div>
   );

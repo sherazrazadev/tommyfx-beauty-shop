@@ -1,45 +1,43 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Mail, Phone, MapPin, Calendar, UserCircle, MoreVertical, Search } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { toast } from '@/components/ui/use-toast';
+import { Mail, Phone, MapPin, Calendar, Search, RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import AdminLayout from '@/components/layout/AdminLayout';
 import { useAuth } from '@/hooks/useAuth';
+import { toast } from '@/components/ui/use-toast';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import AdminLayout from '@/components/layout/AdminLayout';
 
-type Customer = {
+type CustomerProfile = {
   id: string;
+  email: string;
   full_name: string | null;
-  email: string | null;
   phone: string | null;
   address: string | null;
   city: string | null;
   state: string | null;
-  country: string | null;
   zip: string | null;
-  created_at: string | null;
+  country: string | null;
+  created_at: string;
   role: string;
-  orders_count: number;
-  total_spent: number;
 };
 
 const CustomersPage = () => {
-  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [customers, setCustomers] = useState<CustomerProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const { isAdmin, loading: authLoading } = useAuth();
+  const { isAdmin, user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -54,96 +52,51 @@ const CustomersPage = () => {
         variant: "destructive"
       });
       navigate('/');
-    } else {
+    } else if (user) {
       fetchCustomers();
     }
-  }, [isAdmin, authLoading, navigate]);
+  }, [isAdmin, authLoading, user, navigate]);
 
   const fetchCustomers = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      
-      // Fetch all profiles with role 'user'
-      const { data: profilesData, error: profilesError } = await supabase
+      // Get all profiles
+      const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('role', 'user')
         .order('created_at', { ascending: false });
       
-      if (profilesError) throw profilesError;
-      
-      // Get order counts and totals for each user
-      if (profilesData && profilesData.length > 0) {
-        const customersWithOrderData = await Promise.all(
-          profilesData.map(async (profile) => {
-            try {
-              // Get orders for this user
-              const { data: ordersData, error: ordersError } = await supabase
-                .from('orders')
-                .select('id, total_amount')
-                .eq('user_id', profile.id);
-                
-              if (ordersError) throw ordersError;
-              
-              const ordersCount = ordersData?.length || 0;
-              const totalSpent = ordersData?.reduce((sum, order) => sum + (order.total_amount || 0), 0) || 0;
-              
-              return {
-                ...profile,
-                orders_count: ordersCount,
-                total_spent: totalSpent
-              };
-            } catch (error) {
-              console.error(`Error fetching orders for user ${profile.id}:`, error);
-              return {
-                ...profile,
-                orders_count: 0,
-                total_spent: 0
-              };
-            }
-          })
-        );
-        
-        setCustomers(customersWithOrderData);
-      } else {
-        setCustomers([]);
+      if (error) {
+        throw error;
       }
+      
+      setCustomers(data || []);
     } catch (error) {
       console.error('Error fetching customers:', error);
       toast({
         title: "Error",
-        description: "Failed to load customers",
+        description: "Failed to load customer data",
         variant: "destructive"
       });
     } finally {
       setLoading(false);
     }
   };
-  
+
+  // Filter customers based on search query
   const filteredCustomers = searchQuery
     ? customers.filter(
-        customer =>
-          customer.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          customer.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          customer.phone?.includes(searchQuery)
+        customer => 
+          (customer.full_name && customer.full_name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+          (customer.email && customer.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
+          (customer.phone && customer.phone.toLowerCase().includes(searchQuery.toLowerCase())) ||
+          (customer.city && customer.city.toLowerCase().includes(searchQuery.toLowerCase()))
       )
     : customers;
 
   const formatDate = (dateString: string | null) => {
-    if (!dateString) return 'N/A';
+    if (!dateString) return "N/A";
     return new Date(dateString).toLocaleDateString();
-  };
-
-  const getFullAddress = (customer: Customer) => {
-    const parts = [
-      customer.address,
-      customer.city,
-      customer.state,
-      customer.zip,
-      customer.country
-    ].filter(Boolean);
-    
-    return parts.length > 0 ? parts.join(', ') : 'No address provided';
   };
 
   if (authLoading) {
@@ -161,12 +114,12 @@ const CustomersPage = () => {
   return (
     <AdminLayout>
       <div className="p-6">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
-          <h1 className="text-2xl font-bold mb-4 sm:mb-0">Customers</h1>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+          <h1 className="text-2xl font-bold mb-4 md:mb-0">Customers</h1>
           
-          <div className="w-full sm:w-auto flex gap-2">
-            <div className="relative w-full sm:w-64">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
+          <div className="flex gap-3 w-full md:w-auto">
+            <div className="relative w-full md:w-64">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
               <Input
                 placeholder="Search customers..."
                 value={searchQuery}
@@ -174,104 +127,93 @@ const CustomersPage = () => {
                 className="pl-8"
               />
             </div>
-            <Button variant="outline" onClick={fetchCustomers}>
+            
+            <Button variant="outline" size="sm" onClick={fetchCustomers} className="flex gap-1 items-center">
+              <RefreshCw className="h-4 w-4" />
               Refresh
             </Button>
           </div>
         </div>
-        
-        {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <Card key={i} className="h-[200px] animate-pulse bg-gray-100">
-                <CardContent className="p-6">
-                  <div className="h-full flex flex-col justify-center items-center">
-                    <div className="w-12 h-12 rounded-full bg-gray-200 mb-4"></div>
-                    <div className="h-4 w-2/3 bg-gray-200 rounded mb-2"></div>
-                    <div className="h-3 w-1/2 bg-gray-200 rounded"></div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+
+        <Card>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Contact</TableHead>
+                  <TableHead>Location</TableHead>
+                  <TableHead>Joined</TableHead>
+                  <TableHead>Role</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  Array(5).fill(0).map((_, i) => (
+                    <TableRow key={i} className="animate-pulse">
+                      <TableCell><div className="h-4 bg-gray-100 rounded w-32"></div></TableCell>
+                      <TableCell><div className="h-4 bg-gray-100 rounded w-40"></div></TableCell>
+                      <TableCell><div className="h-4 bg-gray-100 rounded w-36"></div></TableCell>
+                      <TableCell><div className="h-4 bg-gray-100 rounded w-24"></div></TableCell>
+                      <TableCell><div className="h-4 bg-gray-100 rounded w-16"></div></TableCell>
+                    </TableRow>
+                  ))
+                ) : filteredCustomers.length > 0 ? (
+                  filteredCustomers.map((customer) => (
+                    <TableRow key={customer.id}>
+                      <TableCell>
+                        <div className="font-medium">{customer.full_name || 'No name'}</div>
+                        <div className="text-sm text-gray-500">{customer.email}</div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2 text-sm">
+                          <Phone size={14} className="text-gray-500" />
+                          <span>{customer.phone || 'No phone'}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm mt-1">
+                          <Mail size={14} className="text-gray-500" />
+                          <span>{customer.email}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-start gap-2 text-sm">
+                          <MapPin size={14} className="text-gray-500 mt-0.5" />
+                          <div>
+                            {customer.city && (
+                              <div>{customer.city}, {customer.state || ''}</div>
+                            )}
+                            <div>{customer.country || 'Unknown location'}</div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2 text-sm">
+                          <Calendar size={14} className="text-gray-500" />
+                          <span>{formatDate(customer.created_at)}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          customer.role === 'admin' 
+                            ? 'bg-purple-100 text-purple-800' 
+                            : 'bg-gray-100 text-gray-800'
+                        }`}>
+                          {customer.role}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-32 text-center">
+                      No customers found
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
           </div>
-        ) : filteredCustomers.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {filteredCustomers.map((customer) => (
-              <Card key={customer.id} className="overflow-hidden">
-                <CardContent className="p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="bg-gray-100 rounded-full w-12 h-12 flex items-center justify-center">
-                        <UserCircle className="h-8 w-8 text-gray-500" />
-                      </div>
-                      <div>
-                        <h3 className="font-medium text-lg">{customer.full_name || 'No Name'}</h3>
-                        <p className="text-sm text-gray-500">{customer.email || 'No Email'}</p>
-                      </div>
-                    </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem>View Details</DropdownMenuItem>
-                        <DropdownMenuItem>Send Email</DropdownMenuItem>
-                        <DropdownMenuItem>View Orders</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                  
-                  <div className="space-y-2 text-sm">
-                    {customer.phone && (
-                      <div className="flex items-center gap-2">
-                        <Phone className="h-4 w-4 text-gray-500" />
-                        <span>{customer.phone}</span>
-                      </div>
-                    )}
-                    
-                    <div className="flex items-start gap-2">
-                      <MapPin className="h-4 w-4 text-gray-500 mt-0.5" />
-                      <span className="flex-1">{getFullAddress(customer)}</span>
-                    </div>
-                    
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-gray-500" />
-                      <span>Joined: {formatDate(customer.created_at)}</span>
-                    </div>
-                  </div>
-                  
-                  <div className="mt-4 pt-4 border-t flex justify-between items-center">
-                    <div>
-                      <Badge variant="outline" className="mr-2">
-                        {customer.orders_count} Orders
-                      </Badge>
-                      {customer.orders_count > 0 && (
-                        <Badge variant="secondary">
-                          ${customer.total_spent.toFixed(2)}
-                        </Badge>
-                      )}
-                    </div>
-                    <Button size="sm" variant="ghost">View</Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center p-12 bg-gray-50 rounded-lg">
-            <UserCircle className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-lg font-medium">No customers found</h3>
-            <p className="text-gray-500">
-              {searchQuery
-                ? "No customers match your search criteria"
-                : "Your customer list will appear here when you have customers"}
-            </p>
-          </div>
-        )}
+        </Card>
       </div>
     </AdminLayout>
   );

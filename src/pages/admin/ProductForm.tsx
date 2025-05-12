@@ -33,10 +33,35 @@ const ProductForm = () => {
   const [price, setPrice] = useState('');
   const [category, setCategory] = useState('');
   const [imageUrl, setImageUrl] = useState('');
+  const [stock, setStock] = useState('');
+  const [discount, setDiscount] = useState('');
+  const [originalPrice, setOriginalPrice] = useState('');
   
   // UI state
   const [loading, setLoading] = useState(isEditing);
   const [saving, setSaving] = useState(false);
+
+  // Calculate discounted price
+  const calculateDiscountedPrice = (original: string, discountPercent: string) => {
+    const originalValue = parseFloat(original);
+    const discountValue = parseFloat(discountPercent);
+    
+    if (isNaN(originalValue) || isNaN(discountValue) || discountValue <= 0 || discountValue >= 100) {
+      return originalValue;
+    }
+    
+    return originalValue * (1 - discountValue / 100);
+  };
+
+  useEffect(() => {
+    // Update price based on original price and discount
+    if (originalPrice && discount) {
+      const discountedPrice = calculateDiscountedPrice(originalPrice, discount);
+      setPrice(discountedPrice.toFixed(2));
+    } else if (originalPrice) {
+      setPrice(originalPrice);
+    }
+  }, [originalPrice, discount]);
 
   useEffect(() => {
     // Fetch product data if in edit mode
@@ -58,6 +83,17 @@ const ProductForm = () => {
             setPrice(data.price.toString());
             setCategory(data.category || '');
             setImageUrl(data.image_url || '');
+            setStock(data.stock?.toString() || '0');
+            
+            // Handle discount data if available
+            if (data.original_price) {
+              setOriginalPrice(data.original_price.toString());
+              if (data.discount_percent) {
+                setDiscount(data.discount_percent.toString());
+              }
+            } else {
+              setOriginalPrice(data.price.toString());
+            }
           }
         } catch (error) {
           console.error('Error fetching product:', error);
@@ -97,6 +133,16 @@ const ProductForm = () => {
       return;
     }
     
+    const stockValue = stock ? parseInt(stock) : 0;
+    if (isNaN(stockValue) || stockValue < 0) {
+      toast({
+        title: "Invalid Stock",
+        description: "Stock must be a non-negative number",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     setSaving(true);
     
     // Prepare product data for database
@@ -106,7 +152,10 @@ const ProductForm = () => {
       description,
       category,
       image_url: imageUrl,
-      updated_at: new Date().toISOString() // Convert Date to string for DB
+      stock: stockValue,
+      updated_at: new Date().toISOString(),
+      original_price: originalPrice ? parseFloat(originalPrice) : numericPrice,
+      discount_percent: discount ? parseFloat(discount) : null
     };
     
     try {
@@ -192,9 +241,55 @@ const ProductForm = () => {
                 />
               </div>
               
-              {/* Price */}
+              {/* Stock */}
               <div className="space-y-2">
-                <Label htmlFor="price">Price (USD) *</Label>
+                <Label htmlFor="stock">Stock Quantity *</Label>
+                <Input 
+                  id="stock" 
+                  type="number" 
+                  min="0"
+                  value={stock} 
+                  onChange={(e) => setStock(e.target.value)}
+                  placeholder="0"
+                  required
+                />
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Original Price */}
+              <div className="space-y-2">
+                <Label htmlFor="original_price">Original Price (USD) *</Label>
+                <Input 
+                  id="original_price" 
+                  type="number" 
+                  step="0.01" 
+                  min="0"
+                  value={originalPrice} 
+                  onChange={(e) => setOriginalPrice(e.target.value)}
+                  placeholder="0.00"
+                  required
+                />
+              </div>
+              
+              {/* Discount */}
+              <div className="space-y-2">
+                <Label htmlFor="discount">Discount (%)</Label>
+                <Input 
+                  id="discount" 
+                  type="number" 
+                  step="0.01" 
+                  min="0"
+                  max="99.99"
+                  value={discount} 
+                  onChange={(e) => setDiscount(e.target.value)}
+                  placeholder="0.00"
+                />
+              </div>
+              
+              {/* Final Price */}
+              <div className="space-y-2">
+                <Label htmlFor="price">Final Price (USD) *</Label>
                 <Input 
                   id="price" 
                   type="number" 
@@ -204,7 +299,11 @@ const ProductForm = () => {
                   onChange={(e) => setPrice(e.target.value)}
                   placeholder="0.00"
                   required
+                  disabled={originalPrice && discount ? true : false}
                 />
+                {originalPrice && discount && (
+                  <p className="text-sm text-gray-500">Auto-calculated from discount</p>
+                )}
               </div>
             </div>
             
