@@ -79,7 +79,7 @@ const CategoryProducts = () => {
             </div>
           ))
         ) : products.length > 0 ? (
-          // Render products
+          // Render products with discount information
           products.map((product) => (
             <ProductCard 
               key={product.id}
@@ -87,6 +87,9 @@ const CategoryProducts = () => {
               name={product.name}
               price={parseFloat(product.price)}
               image={product.image_url || 'https://source.unsplash.com/oG8PIWBc3nE'}
+              category={product.category}
+              originalPrice={product.original_price ? parseFloat(product.original_price) : undefined}
+              discountPercent={product.discount_percent ? parseFloat(product.discount_percent) : undefined}
             />
           ))
         ) : (

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ChevronRight, ArrowLeft } from 'lucide-react';
+import { ChevronRight, ArrowLeft, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -33,6 +33,7 @@ const ProductForm = () => {
   const [price, setPrice] = useState('');
   const [category, setCategory] = useState('');
   const [imageUrl, setImageUrl] = useState('');
+  const [additionalImages, setAdditionalImages] = useState<string[]>([]);
   const [stock, setStock] = useState('');
   const [discount, setDiscount] = useState('');
   const [originalPrice, setOriginalPrice] = useState('');
@@ -83,6 +84,12 @@ const ProductForm = () => {
             setPrice(data.price.toString());
             setCategory(data.category || '');
             setImageUrl(data.image_url || '');
+            
+            // Handle additional images if present
+            if (data.additional_images && Array.isArray(data.additional_images)) {
+              setAdditionalImages(data.additional_images);
+            }
+            
             setStock(data.stock?.toString() || '0');
             
             // Handle discount data if available
@@ -110,6 +117,35 @@ const ProductForm = () => {
       fetchProduct();
     }
   }, [id, isEditing]);
+
+  const handleAddImage = () => {
+    if (imageUrl.trim() && !additionalImages.includes(imageUrl.trim())) {
+      setAdditionalImages([...additionalImages, imageUrl.trim()]);
+      setImageUrl('');
+      
+      toast({
+        title: "Image Added",
+        description: "The image has been added to the product gallery",
+      });
+    } else if (additionalImages.includes(imageUrl.trim())) {
+      toast({
+        title: "Image Already Exists",
+        description: "This image URL is already in the gallery",
+        variant: "destructive"
+      });
+    }
+  };
+  
+  const handleRemoveImage = (index: number) => {
+    const newImages = [...additionalImages];
+    newImages.splice(index, 1);
+    setAdditionalImages(newImages);
+    
+    toast({
+      title: "Image Removed",
+      description: "The image has been removed from the gallery",
+    });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -151,7 +187,8 @@ const ProductForm = () => {
       price: numericPrice,
       description,
       category,
-      image_url: imageUrl,
+      image_url: imageUrl || (additionalImages.length > 0 ? additionalImages[0] : null),
+      additional_images: additionalImages.length > 0 ? additionalImages : null,
       stock: stockValue,
       updated_at: new Date().toISOString(),
       original_price: originalPrice ? parseFloat(originalPrice) : numericPrice,
@@ -334,29 +371,70 @@ const ProductForm = () => {
               />
             </div>
             
-            {/* Image URL */}
+            {/* Primary Image URL */}
             <div className="space-y-2">
-              <Label htmlFor="image_url">Image URL</Label>
-              <Input 
-                id="image_url" 
-                value={imageUrl} 
-                onChange={(e) => setImageUrl(e.target.value)}
-                placeholder="https://example.com/image.jpg"
-              />
-              {imageUrl && (
-                <div className="mt-2">
-                  <p className="text-sm text-gray-500 mb-2">Preview:</p>
-                  <img 
-                    src={imageUrl} 
-                    alt={name} 
-                    className="h-40 w-40 object-cover rounded border border-gray-200" 
-                    onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
-                      e.currentTarget.src = 'https://source.unsplash.com/oG8PIWBc3nE';
-                    }}
-                  />
-                </div>
-              )}
+              <Label htmlFor="image_url">Main Image URL</Label>
+              <div className="flex space-x-2">
+                <Input 
+                  id="image_url" 
+                  value={imageUrl} 
+                  onChange={(e) => setImageUrl(e.target.value)}
+                  placeholder="https://example.com/image.jpg"
+                  className="flex-1"
+                />
+                <Button 
+                  type="button" 
+                  onClick={handleAddImage}
+                  disabled={!imageUrl.trim()}
+                >
+                  <Plus size={16} className="mr-2" /> Add to Gallery
+                </Button>
+              </div>
             </div>
+            
+            {/* Image Gallery */}
+            {(additionalImages.length > 0 || imageUrl) && (
+              <div className="space-y-2">
+                <Label className="block mb-2">Image Gallery</Label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                  {imageUrl && (
+                    <div className="relative aspect-square rounded border border-gray-200 overflow-hidden">
+                      <img 
+                        src={imageUrl} 
+                        alt="Preview" 
+                        className="w-full h-full object-cover"
+                        onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
+                          e.currentTarget.src = 'https://source.unsplash.com/oG8PIWBc3nE';
+                        }}
+                      />
+                      <div className="absolute top-0 left-0 w-full p-2 bg-gray-900 bg-opacity-50 text-white text-xs">
+                        Current
+                      </div>
+                    </div>
+                  )}
+                  
+                  {additionalImages.map((img, index) => (
+                    <div key={index} className="relative aspect-square rounded border border-gray-200 overflow-hidden group">
+                      <img 
+                        src={img} 
+                        alt={`Product ${index + 1}`} 
+                        className="w-full h-full object-cover"
+                        onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
+                          e.currentTarget.src = 'https://source.unsplash.com/oG8PIWBc3nE';
+                        }}
+                      />
+                      <button 
+                        type="button"
+                        onClick={() => handleRemoveImage(index)}
+                        className="absolute top-2 right-2 bg-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X size={16} className="text-red-500" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             
             <div className="pt-4">
               <Button 

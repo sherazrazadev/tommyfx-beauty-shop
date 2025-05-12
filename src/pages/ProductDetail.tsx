@@ -66,8 +66,20 @@ const ProductDetail = () => {
         
         if (data) {
           console.log("Product data:", data);
-          // Set up images array - use the main image 4 times for demo purposes
-          const images = Array(4).fill(data.image_url || 'https://source.unsplash.com/oG8PIWBc3nE');
+          // Set up images array from main image and additional_images
+          const mainImage = data.image_url || 'https://source.unsplash.com/oG8PIWBc3nE';
+          let images = [mainImage];
+          
+          // Add additional images if available
+          if (data.additional_images && Array.isArray(data.additional_images)) {
+            images = [...images, ...data.additional_images];
+          }
+          
+          // Ensure we have at least 4 images for the UI (can be duplicates)
+          if (images.length < 4) {
+            const fillerCount = 4 - images.length;
+            images = [...images, ...Array(fillerCount).fill(mainImage)];
+          }
           
           setProduct({
             ...data,
@@ -170,7 +182,6 @@ const ProductDetail = () => {
       toast({
         title: "Added to cart",
         description: `${quantity} x ${product.name} added to your cart`,
-        variant: "default"
       });
     }
   };
@@ -213,6 +224,10 @@ const ProductDetail = () => {
   const handleReviewSubmitted = async () => {
     // After a review is submitted, fetch the reviews again
     if (id) {
+      toast({
+        title: "Review submitted",
+        description: "Your review will appear after approval by an administrator.",
+      });
       await fetchReviews(id);
     }
   };
@@ -251,8 +266,8 @@ const ProductDetail = () => {
   const currentPageUrl = window.location.href;
 
   // Calculate discount percentage if both prices are available
-  const discountPercentage = product.discount_price && product.price && product.price > 0
-    ? Math.round(((product.price - product.discount_price) / product.price) * 100)
+  const discountPercentage = product.discount_percent && product.price && product.price > 0
+    ? Math.round(product.discount_percent)
     : null;
 
   return (
@@ -296,7 +311,7 @@ const ProductDetail = () => {
               </div>
               
               <div className="grid grid-cols-4 gap-3">
-                {product.images.map((image: string, index: number) => (
+                {product.images.slice(0, 4).map((image: string, index: number) => (
                   <button
                     key={index}
                     className={`aspect-square rounded-md overflow-hidden border-2 ${
@@ -336,10 +351,10 @@ const ProductDetail = () => {
                 </span>
               </div>
               
-              {product.discount_price ? (
+              {product.discount_percent ? (
                 <div className="mb-6">
-                  <p className="text-2xl font-bold text-tommyfx-blue">${product.discount_price.toFixed(2)}</p>
-                  <p className="text-gray-500 line-through">${product.price.toFixed(2)}</p>
+                  <p className="text-2xl font-bold text-tommyfx-blue">${product.price.toFixed(2)}</p>
+                  <p className="text-gray-500 line-through">${product.original_price.toFixed(2)}</p>
                 </div>
               ) : (
                 <p className="text-2xl font-bold mb-6">${product.price.toFixed(2)}</p>

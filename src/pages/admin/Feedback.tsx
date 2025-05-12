@@ -23,18 +23,9 @@ interface FeedbackItem {
   email: string;
   message: string;
   approved: boolean;
-}
-
-// Type for the actual data coming from Supabase
-interface SupabaseFeedback {
-  id: string;
-  created_at: string;
-  comment: string;
-  user_id: string | null;
-  product_id: string | null;
-  rating: number;
-  approved: boolean;
-  profiles?: { full_name: string; email: string } | null;
+  user_id?: string;
+  product_id?: string;
+  rating?: number;
 }
 
 const Feedback = () => {
@@ -46,15 +37,9 @@ const Feedback = () => {
     setLoading(true);
     try {
       console.log('Fetching feedback data...');
-      const { data, error } = await supabase
+      const { data: feedbackData, error } = await supabase
         .from('feedback')
-        .select(`
-          *,
-          profiles:user_id (
-            full_name,
-            email
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
         
       if (error) {
@@ -62,17 +47,45 @@ const Feedback = () => {
         throw error;
       }
       
-      console.log('Feedback data fetched:', data);
+      console.log('Feedback data fetched:', feedbackData);
       
       // Map the Supabase data to our FeedbackItem interface
-      const mappedFeedback: FeedbackItem[] = (data as unknown as SupabaseFeedback[]).map(item => ({
-        id: item.id,
-        created_at: item.created_at,
-        name: item.profiles?.full_name || 'Anonymous User',
-        email: item.profiles?.email || 'No Email',
-        message: item.comment,
-        approved: item.approved || false
-      }));
+      const mappedFeedback: FeedbackItem[] = [];
+      
+      for (const item of feedbackData || []) {
+        let name = 'Anonymous User';
+        let email = 'No Email';
+        
+        // If there's a user_id, try to get user info
+        if (item.user_id) {
+          try {
+            const { data: userData, error: userError } = await supabase
+              .from('profiles')
+              .select('full_name, email')
+              .eq('id', item.user_id)
+              .single();
+              
+            if (!userError && userData) {
+              name = userData.full_name || name;
+              email = userData.email || email;
+            }
+          } catch (userError) {
+            console.error('Error fetching user data:', userError);
+          }
+        }
+        
+        mappedFeedback.push({
+          id: item.id,
+          created_at: item.created_at,
+          name,
+          email,
+          message: item.comment,
+          approved: item.approved || false,
+          user_id: item.user_id,
+          product_id: item.product_id,
+          rating: item.rating
+        });
+      }
       
       console.log('Mapped feedback:', mappedFeedback);
       setFeedback(mappedFeedback);
@@ -97,18 +110,18 @@ const Feedback = () => {
       setUpdating(true);
       console.log(`Updating feedback ${id} status to ${approved}`);
       
-      const { error, data } = await supabase
+      const { error } = await supabase
         .from('feedback')
-        .update({ approved, updated_at: new Date().toISOString() })
-        .eq('id', id)
-        .select();
+        .update({ 
+          approved, 
+          updated_at: new Date().toISOString() 
+        })
+        .eq('id', id);
         
       if (error) {
         console.error('Error updating feedback status:', error);
         throw error;
       }
-      
-      console.log('Update response:', data);
       
       // Update local state without refetching
       setFeedback(prev => 
