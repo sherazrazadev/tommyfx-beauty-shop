@@ -69,6 +69,8 @@ const OrderDetail = () => {
       
       setLoading(true);
       try {
+        console.log(`Fetching order details for order ID: ${id}`);
+        
         // Fetch order data
         const { data: orderData, error: orderError } = await supabase
           .from('orders')
@@ -76,9 +78,13 @@ const OrderDetail = () => {
           .eq('id', id)
           .single();
           
-        if (orderError) throw orderError;
+        if (orderError) {
+          console.error('Error fetching order:', orderError);
+          throw orderError;
+        }
         
         if (orderData) {
+          console.log('Order data retrieved:', orderData);
           setOrder(orderData as Order);
           setCurrentStatus(orderData.status as OrderStatus);
           
@@ -124,16 +130,24 @@ const OrderDetail = () => {
     
     setUpdating(true);
     try {
+      console.log(`Updating order ${id} status to ${newStatus}`);
+      
       // Update database
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('orders')
         .update({ 
           status: newStatus,
           updated_at: new Date().toISOString()
         })
-        .eq('id', id);
+        .eq('id', id)
+        .select();
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error updating order status:', error);
+        throw error;
+      }
+      
+      console.log('Update response:', data);
       
       // Update local state and order object
       setCurrentStatus(newStatus);

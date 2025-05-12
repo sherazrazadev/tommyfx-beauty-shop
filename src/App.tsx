@@ -44,6 +44,8 @@ function App() {
           <Route path="/profile" element={<Profile />} />
           <Route path="/categories" element={<Categories />} />
           <Route path="/categories/:categoryId" element={<CategoryProducts />} />
+          <Route path="/category/:categoryId" element={<CategoryProducts />} />
+          
           <Route path="/wishlist" element={<Wishlist />} />
           
           {/* Admin Routes */}

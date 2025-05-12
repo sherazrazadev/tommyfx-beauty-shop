@@ -185,18 +185,26 @@ const OrdersPage = () => {
     }
   }, [statusFilter, user, isAdmin, authLoading]);
 
-  // Make sure the updateOrderStatus function properly updates the local state:
+  // Updated updateOrderStatus function to handle status updates correctly
   const updateOrderStatus = async (orderId: string, newStatus: string) => {
     try {
-      const { error } = await supabase
+      console.log(`Updating order ${orderId} status to ${newStatus}`);
+      
+      const { data, error } = await supabase
         .from('orders')
         .update({ 
           status: newStatus,
           updated_at: new Date().toISOString() 
         })
-        .eq('id', orderId);
+        .eq('id', orderId)
+        .select();
         
-      if (error) throw error;
+      if (error) {
+        console.error('Error updating order status:', error);
+        throw error;
+      }
+      
+      console.log('Update response:', data);
       
       // Update local state
       setOrders(prev => 

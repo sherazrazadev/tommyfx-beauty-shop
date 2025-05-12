@@ -34,7 +34,7 @@ interface SupabaseFeedback {
   product_id: string | null;
   rating: number;
   approved: boolean;
-  user?: { full_name: string; email: string } | null;
+  profiles?: { full_name: string; email: string } | null;
 }
 
 const Feedback = () => {
@@ -42,85 +42,96 @@ const Feedback = () => {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
 
-  useEffect(() => {
-    const fetchFeedback = async () => {
-      setLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from('feedback')
-          .select(`
-            *,
-            profiles:user_id (
-              full_name,
-              email
-            )
-          `)
-          .order('created_at', { ascending: false });
-          
-        if (error) {
-          throw error;
-        }
+  const fetchFeedback = async () => {
+    setLoading(true);
+    try {
+      console.log('Fetching feedback data...');
+      const { data, error } = await supabase
+        .from('feedback')
+        .select(`
+          *,
+          profiles:user_id (
+            full_name,
+            email
+          )
+        `)
+        .order('created_at', { ascending: false });
         
-        // Map the Supabase data to our FeedbackItem interface
-        const mappedFeedback = (data as unknown as (SupabaseFeedback & { 
-          profiles?: { full_name: string; email: string } | null 
-        })[]).map(item => ({
-          id: item.id,
-          created_at: item.created_at,
-          name: item.profiles?.full_name || 'Anonymous User',
-          email: item.profiles?.email || 'No Email',
-          message: item.comment,
-          approved: item.approved || false
-        }));
-        
-        setFeedback(mappedFeedback);
-      } catch (error) {
-        console.error('Error fetching feedback:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to load feedback data',
-          variant: 'destructive'
-        });
-      } finally {
-        setLoading(false);
+      if (error) {
+        console.error('Error fetching feedback data:', error);
+        throw error;
       }
-    };
-    
+      
+      console.log('Feedback data fetched:', data);
+      
+      // Map the Supabase data to our FeedbackItem interface
+      const mappedFeedback: FeedbackItem[] = (data as unknown as SupabaseFeedback[]).map(item => ({
+        id: item.id,
+        created_at: item.created_at,
+        name: item.profiles?.full_name || 'Anonymous User',
+        email: item.profiles?.email || 'No Email',
+        message: item.comment,
+        approved: item.approved || false
+      }));
+      
+      console.log('Mapped feedback:', mappedFeedback);
+      setFeedback(mappedFeedback);
+    } catch (error) {
+      console.error('Error fetching feedback:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load feedback data',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  useEffect(() => {
     fetchFeedback();
   }, []);
 
-const updateFeedbackStatus = async (id: string, approved: boolean) => {
-  try {
-    setUpdating(true);
-    const { error } = await supabase
-      .from('feedback')
-      .update({ approved, updated_at: new Date().toISOString() })
-      .eq('id', id);
+  const updateFeedbackStatus = async (id: string, approved: boolean) => {
+    try {
+      setUpdating(true);
+      console.log(`Updating feedback ${id} status to ${approved}`);
       
-    if (error) throw error;
-    
-    // Update local state without refetching
-    setFeedback(prev => 
-      prev.map(item => 
-        item.id === id ? { ...item, approved } : item
-      )
-    );
-    
-    toast({
-      title: approved ? "Feedback Approved" : "Feedback Unapproved",
-      description: approved ? "Feedback is now public" : "Feedback has been hidden",
-    });
-  } catch (error) {
-    console.error('Error updating feedback status:', error);
-    toast({
-      title: "Error",
-      description: "Failed to update feedback status",
-      variant: "destructive"
-    });
-  } finally {
-    setUpdating(false);
-  }
-};
+      const { error, data } = await supabase
+        .from('feedback')
+        .update({ approved, updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .select();
+        
+      if (error) {
+        console.error('Error updating feedback status:', error);
+        throw error;
+      }
+      
+      console.log('Update response:', data);
+      
+      // Update local state without refetching
+      setFeedback(prev => 
+        prev.map(item => 
+          item.id === id ? { ...item, approved } : item
+        )
+      );
+      
+      toast({
+        title: approved ? "Feedback Approved" : "Feedback Unapproved",
+        description: approved ? "Feedback is now public" : "Feedback has been hidden",
+      });
+    } catch (error) {
+      console.error('Error updating feedback status:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update feedback status",
+        variant: "destructive"
+      });
+    } finally {
+      setUpdating(false);
+    }
+  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -144,6 +155,12 @@ const updateFeedbackStatus = async (id: string, approved: boolean) => {
             <ChevronRight size={16} className="mx-2" />
             <span>Feedback</span>
           </div>
+        </div>
+        
+        <div className="mb-4 flex justify-end">
+          <Button onClick={fetchFeedback} variant="outline" size="sm" disabled={loading}>
+            Refresh
+          </Button>
         </div>
         
         {loading ? (

@@ -66,7 +66,7 @@ const Categories = () => {
         ) : categories.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {categories.map((category) => (
-              <Link to={`/category/${category}`} key={category} className="group">
+              <Link to={`/categories/${category.toLowerCase()}`} key={category} className="group">
                 <div className="relative overflow-hidden rounded-xl shadow-lg transition-all duration-300 hover:shadow-xl bg-white h-full">
                   {/* Image */}
                   <div className="h-52 overflow-hidden">
