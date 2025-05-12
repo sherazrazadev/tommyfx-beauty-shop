@@ -1,11 +1,37 @@
-import React from 'react';
+
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
 import TestimonialSection from '@/components/testimonials/TestimonialSection';
-import ProductCard from '@/components/products/ProductCard';
+import ProductCard from '@/components/ui/ProductCard';
+import { supabase } from '@/integrations/supabase/client';
 
 const Home = () => {
+  const [featuredProducts, setFeaturedProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchFeaturedProducts = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('products')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(4);
+          
+        if (error) throw error;
+        setFeaturedProducts(data || []);
+      } catch (error) {
+        console.error('Error fetching featured products:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchFeaturedProducts();
+  }, []);
+
   return (
     <div>
       {/* Hero Section */}
@@ -46,20 +72,38 @@ const Home = () => {
         <div className="container-custom">
           <h2 className="text-3xl font-bold text-center mb-12">Featured Products</h2>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {featuredProducts.map(product => (
-              <ProductCard
-                key={product.id}
-                id={product.id}
-                name={product.name}
-                price={product.price}
-                image={product.image_url || '/placeholder.svg'}
-                category={product.category}
-                originalPrice={product.original_price}
-                discountPercent={product.discount_percent}
-              />
-            ))}
-          </div>
+          {loading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="bg-white rounded-md p-4 animate-pulse">
+                  <div className="bg-gray-200 h-48 rounded-md mb-4"></div>
+                  <div className="bg-gray-200 h-4 rounded-md mb-2 w-3/4"></div>
+                  <div className="bg-gray-200 h-4 rounded-md w-1/2"></div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {featuredProducts.length > 0 ? (
+                featuredProducts.map(product => (
+                  <ProductCard
+                    key={product.id}
+                    id={product.id}
+                    name={product.name}
+                    price={product.price}
+                    image={product.image_url || '/placeholder.svg'}
+                    category={product.category}
+                    originalPrice={product.original_price}
+                    discountPercent={product.discount_percent}
+                  />
+                ))
+              ) : (
+                <div className="col-span-full text-center py-10">
+                  <p className="text-gray-500">No products found</p>
+                </div>
+              )}
+            </div>
+          )}
           
           <div className="text-center mt-10">
             <Link 

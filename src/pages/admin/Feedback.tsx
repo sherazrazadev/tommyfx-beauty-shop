@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight, MessageSquare, CheckCircle, XCircle } from 'lucide-react';
@@ -24,6 +25,18 @@ interface FeedbackItem {
   approved: boolean;
 }
 
+// Type for the actual data coming from Supabase
+interface SupabaseFeedback {
+  id: string;
+  created_at: string;
+  comment: string;
+  user_id: string | null;
+  product_id: string | null;
+  rating: number;
+  approved: boolean;
+  user?: { full_name: string; email: string } | null;
+}
+
 const Feedback = () => {
   const [feedback, setFeedback] = useState<FeedbackItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,14 +48,32 @@ const Feedback = () => {
       try {
         const { data, error } = await supabase
           .from('feedback')
-          .select('*')
+          .select(`
+            *,
+            profiles:user_id (
+              full_name,
+              email
+            )
+          `)
           .order('created_at', { ascending: false });
           
         if (error) {
           throw error;
         }
         
-        setFeedback(data as FeedbackItem[]);
+        // Map the Supabase data to our FeedbackItem interface
+        const mappedFeedback = (data as unknown as (SupabaseFeedback & { 
+          profiles?: { full_name: string; email: string } | null 
+        })[]).map(item => ({
+          id: item.id,
+          created_at: item.created_at,
+          name: item.profiles?.full_name || 'Anonymous User',
+          email: item.profiles?.email || 'No Email',
+          message: item.comment,
+          approved: item.approved || false
+        }));
+        
+        setFeedback(mappedFeedback);
       } catch (error) {
         console.error('Error fetching feedback:', error);
         toast({
