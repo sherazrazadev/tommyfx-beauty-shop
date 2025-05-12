@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ChevronRight, ArrowLeft } from 'lucide-react';
@@ -125,6 +124,7 @@ const OrderDetail = () => {
     
     setUpdating(true);
     try {
+      // Update database
       const { error } = await supabase
         .from('orders')
         .update({ 
@@ -132,10 +132,13 @@ const OrderDetail = () => {
           updated_at: new Date().toISOString()
         })
         .eq('id', id);
-        
+      
       if (error) throw error;
       
+      // Update local state and order object
       setCurrentStatus(newStatus);
+      setOrder(prev => prev ? {...prev, status: newStatus} : null);
+      
       toast({
         title: 'Status Updated',
         description: `Order status changed to ${newStatus}`,

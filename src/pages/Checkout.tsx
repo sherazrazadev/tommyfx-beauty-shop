@@ -1,372 +1,259 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
 import { useCart } from '@/hooks/useCart';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Info } from 'lucide-react';
 
 const Checkout = () => {
   const { cart, getCartTotal, clearCart } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
-  
   const [formData, setFormData] = useState({
-    fullName: '',
-    email: '',
-    phone: '',
+    name: user?.user_metadata?.full_name || '',
+    email: user?.email || '',
     address: '',
     city: '',
     state: '',
-    zipCode: '',
-    country: 'United States'
+    zip: '',
   });
-  
-  const [loading, setLoading] = useState(false);
-  
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+  const [processing, setProcessing] = useState(false);
+  const [checkoutAsGuest, setCheckoutAsGuest] = useState(!user);
+
+  const total = getCartTotal();
+
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        name: user.user_metadata?.full_name || '',
+        email: user.email || '',
+        address: '',
+        city: '',
+        state: '',
+        zip: '',
+      });
+    }
+  }, [user]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
-  
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (cart.length === 0) {
       toast({
-        title: "Cart is empty",
-        description: "Please add some products to your cart before checking out",
-        variant: "destructive"
+        title: "Your cart is empty",
+        description: "Add some items to your cart before checking out.",
       });
       return;
     }
-    
-    setLoading(true);
-    
+
+    setProcessing(true);
     try {
-      // Only logged in users can checkout
-      if (!user) {
-        toast({
-          title: "Please log in",
-          description: "You need to be logged in to complete your order",
-          variant: "destructive"
-        });
-        navigate('/login');
-        return;
-      }
-      
-      // Create new order
+      // Create a new order in the database
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
-        .insert({
-          user_id: user.id,
-          total_amount: getCartTotal(),
-          shipping_address: formData.address,
-          shipping_city: formData.city,
-          shipping_state: formData.state,
-          shipping_zip: formData.zipCode,
-          shipping_country: formData.country
-        })
-        .select('id')
-        .single();
-      
-      if (orderError) throw orderError;
-      
-      // Create order items
+        .insert([
+          {
+            user_id: user?.id || null,
+            total_amount: total,
+            status: 'pending',
+            payment_method: 'credit_card', // Default payment method
+            shipping_address: formData.address,
+            shipping_city: formData.city,
+            shipping_state: formData.state,
+            shipping_zip: formData.zip,
+          }
+        ])
+        .select()
+
+      if (orderError) {
+        throw orderError;
+      }
+
+      const newOrder = orderData ? orderData[0] : null;
+
+      if (!newOrder) {
+        throw new Error('Failed to create order');
+      }
+
+      // Create order items for each item in the cart
       const orderItems = cart.map(item => ({
-        order_id: orderData.id,
-        product_id: item.id,
+        order_id: newOrder.id,
         product_name: item.name,
+        quantity: item.quantity,
         price: item.price,
-        quantity: item.quantity
       }));
-      
-      const { error: itemsError } = await supabase
+
+      const { error: orderItemsError } = await supabase
         .from('order_items')
         .insert(orderItems);
-      
-      if (itemsError) throw itemsError;
-      
-      // Update user profile if needed
-      if (formData.fullName || formData.phone || formData.address) {
-        await supabase
-          .from('profiles')
-          .update({
-            full_name: formData.fullName || null,
-            phone: formData.phone || null,
-            address: formData.address || null,
-            city: formData.city || null,
-            state: formData.state || null,
-            zip: formData.zipCode || null,
-            country: formData.country || 'United States'
-          })
-          .eq('id', user.id);
+
+      if (orderItemsError) {
+        throw orderItemsError;
       }
-      
-      // Clear cart and show success message
+
+      // Clear the cart
       clearCart();
-      
+
+      // Show success message
       toast({
-        title: "Order placed successfully!",
-        description: "Thank you for your purchase",
+        title: "Order placed",
+        description: "Your order has been successfully placed!",
       });
-      
+
+      // Redirect to order confirmation page or home page
       navigate('/');
-      
     } catch (error: any) {
-      console.error('Checkout error:', error);
+      console.error("Checkout failed:", error);
       toast({
         title: "Checkout failed",
-        description: error.message || "An error occurred while processing your order",
-        variant: "destructive"
+        description: error.message || "Something went wrong. Please try again.",
+        variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setProcessing(false);
     }
   };
-  
-  // Fetch user profile data when component mounts
-  useEffect(() => {
-    const fetchUserProfile = async () => {
-      if (user) {
-        const { data } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-          
-        if (data) {
-          setFormData({
-            fullName: data.full_name || '',
-            email: user.email || '',
-            phone: data.phone || '',
-            address: data.address || '',
-            city: data.city || '',
-            state: data.state || '',
-            zipCode: data.zip || '',
-            country: data.country || 'United States'
-          });
-        }
-      }
-    };
-    
-    fetchUserProfile();
-  }, [user]);
-  
-  if (!user) {
-    // If not logged in, redirect to login page
-    useEffect(() => {
-      toast({
-        title: "Login required",
-        description: "Please log in to continue with checkout",
-      });
-      navigate('/login', { state: { returnUrl: '/checkout' } });
-    }, []);
-    return null;
-  }
-  
-  if (cart.length === 0) {
-    navigate('/cart');
-    return null;
-  }
 
   return (
-    <div className="bg-gray-50 py-12">
-      <div className="container-custom">
-        <h1 className="text-3xl font-bold mb-8">Checkout</h1>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <h2 className="text-xl font-bold mb-4">Shipping Information</h2>
-              
-              <form onSubmit={handleSubmit}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                  <div>
-                    <label htmlFor="fullName" className="block text-sm font-medium mb-1">
-                      Full Name
-                    </label>
-                    <input
-                      type="text"
-                      id="fullName"
-                      name="fullName"
-                      value={formData.fullName}
-                      onChange={handleInputChange}
-                      className="w-full p-2 border rounded"
-                      required
-                    />
-                  </div>
-                  
-                  <div>
-                    <label htmlFor="email" className="block text-sm font-medium mb-1">
-                      Email
-                    </label>
-                    <input
-                      type="email"
-                      id="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleInputChange}
-                      className="w-full p-2 border rounded"
-                      required
-                    />
-                  </div>
-                </div>
-                
-                <div className="mb-4">
-                  <label htmlFor="phone" className="block text-sm font-medium mb-1">
-                    Phone Number
-                  </label>
-                  <input
-                    type="tel"
-                    id="phone"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    className="w-full p-2 border rounded"
-                    required
-                  />
-                </div>
-                
-                <div className="mb-4">
-                  <label htmlFor="address" className="block text-sm font-medium mb-1">
-                    Address
-                  </label>
-                  <input
-                    type="text"
-                    id="address"
-                    name="address"
-                    value={formData.address}
-                    onChange={handleInputChange}
-                    className="w-full p-2 border rounded"
-                    required
-                  />
-                </div>
-                
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
-                  <div>
-                    <label htmlFor="city" className="block text-sm font-medium mb-1">
-                      City
-                    </label>
-                    <input
-                      type="text"
-                      id="city"
-                      name="city"
-                      value={formData.city}
-                      onChange={handleInputChange}
-                      className="w-full p-2 border rounded"
-                      required
-                    />
-                  </div>
-                  
-                  <div>
-                    <label htmlFor="state" className="block text-sm font-medium mb-1">
-                      State
-                    </label>
-                    <input
-                      type="text"
-                      id="state"
-                      name="state"
-                      value={formData.state}
-                      onChange={handleInputChange}
-                      className="w-full p-2 border rounded"
-                      required
-                    />
-                  </div>
-                  
-                  <div>
-                    <label htmlFor="zipCode" className="block text-sm font-medium mb-1">
-                      ZIP Code
-                    </label>
-                    <input
-                      type="text"
-                      id="zipCode"
-                      name="zipCode"
-                      value={formData.zipCode}
-                      onChange={handleInputChange}
-                      className="w-full p-2 border rounded"
-                      required
-                    />
-                  </div>
-                </div>
-                
-                <div className="mb-6">
-                  <label htmlFor="country" className="block text-sm font-medium mb-1">
-                    Country
-                  </label>
-                  <select
-                    id="country"
-                    name="country"
-                    value={formData.country}
-                    onChange={handleInputChange}
-                    className="w-full p-2 border rounded"
-                    required
-                  >
-                    <option value="United States">United States</option>
-                    <option value="Canada">Canada</option>
-                    <option value="United Kingdom">United Kingdom</option>
-                    <option value="Australia">Australia</option>
-                    <option value="Germany">Germany</option>
-                  </select>
-                </div>
-                
-                <div className="mb-6">
-                  <h3 className="font-medium mb-2">Payment Method</h3>
-                  <div className="border rounded p-4 flex items-center">
-                    <input
-                      type="radio"
-                      id="cashOnDelivery"
-                      name="paymentMethod"
-                      checked
-                      readOnly
-                      className="mr-2"
-                    />
-                    <label htmlFor="cashOnDelivery">Cash on Delivery</label>
-                  </div>
-                </div>
-                
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? 'Processing...' : 'Place Order'}
-                </Button>
-              </form>
-            </div>
+    <div className="container-custom py-12">
+      <h1 className="text-3xl font-bold mb-6">Checkout</h1>
+
+      {!user && (
+        <div className="bg-blue-50 p-4 rounded-md mb-6">
+          <div className="flex items-center mb-2">
+            <Info size={20} className="text-blue-500 mr-2" />
+            <h3 className="font-medium">Complete checkout as a guest or sign in</h3>
           </div>
-          
-          <div className="bg-white rounded-lg shadow-sm p-6 h-fit">
-            <h2 className="text-xl font-bold mb-4">Order Summary</h2>
-            
-            <div className="mb-4">
-              {cart.map((item) => (
-                <div key={item.id} className="flex justify-between py-2">
-                  <div>
-                    <span className="font-medium">{item.name}</span>
-                    <div className="text-sm text-gray-500">Qty: {item.quantity}</div>
-                  </div>
-                  <div className="font-medium">${(item.price * item.quantity).toFixed(2)}</div>
-                </div>
-              ))}
-            </div>
-            
-            <Separator className="my-4" />
-            
-            <div className="space-y-3 mb-6">
-              <div className="flex justify-between text-gray-600">
-                <span>Subtotal</span>
-                <span>${getCartTotal().toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-gray-600">
-                <span>Shipping</span>
-                <span>Free</span>
-              </div>
-              <Separator />
-              <div className="flex justify-between font-bold text-lg">
-                <span>Total</span>
-                <span>${getCartTotal().toFixed(2)}</span>
-              </div>
-            </div>
+          <p className="text-sm mb-3">
+            You're checking out as a guest. You can create an account or sign in to save your details for future orders.
+          </p>
+          <div className="flex space-x-4">
+            <Button variant="outline" onClick={() => navigate('/login')}>
+              Sign in
+            </Button>
+            <Button variant="outline" onClick={() => navigate('/signup')}>
+              Create account
+            </Button>
           </div>
         </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Order Summary */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Order Summary</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {cart.length === 0 ? (
+              <p>Your cart is empty.</p>
+            ) : (
+              <div className="space-y-3">
+                {cart.map((item) => (
+                  <div key={item.id} className="flex justify-between">
+                    <span>{item.name} ({item.quantity})</span>
+                    <span>${(item.price * item.quantity).toFixed(2)}</span>
+                  </div>
+                ))}
+                <div className="flex justify-between font-bold">
+                  <span>Total:</span>
+                  <span>${total.toFixed(2)}</span>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Checkout Form */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Shipping Information</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <Label htmlFor="name">Full Name</Label>
+                <Input
+                  type="text"
+                  id="name"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  type="email"
+                  id="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  required={checkoutAsGuest}
+                />
+              </div>
+              <div>
+                <Label htmlFor="address">Address</Label>
+                <Input
+                  type="text"
+                  id="address"
+                  name="address"
+                  value={formData.address}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="city">City</Label>
+                  <Input
+                    type="text"
+                    id="city"
+                    name="city"
+                    value={formData.city}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="state">State</Label>
+                  <Input
+                    type="text"
+                    id="state"
+                    name="state"
+                    value={formData.state}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="zip">ZIP Code</Label>
+                <Input
+                  type="text"
+                  id="zip"
+                  name="zip"
+                  value={formData.zip}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+              <Button disabled={processing} className="w-full">
+                {processing ? "Processing..." : "Place Order"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

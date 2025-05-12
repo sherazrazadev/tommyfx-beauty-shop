@@ -52,19 +52,35 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         // Update quantity of existing item
         const updatedCart = [...currentCart];
         updatedCart[existingItemIndex].quantity += item.quantity;
+        
+        toast({
+          title: "Cart updated",
+          description: `${item.name} quantity increased in your cart`,
+        });
+        
         return updatedCart;
       } else {
         // Add new item to cart
+        toast({
+          title: "Item added",
+          description: `${item.name} has been added to your cart`,
+        });
+        
         return [...currentCart, item];
       }
     });
   };
   
   const removeFromCart = (id: string) => {
+    const itemToRemove = cart.find(item => item.id === id);
+    
     setCart(currentCart => currentCart.filter(item => item.id !== id));
+    
     toast({
       title: "Item removed",
-      description: "Item has been removed from your cart",
+      description: itemToRemove 
+        ? `${itemToRemove.name} has been removed from your cart` 
+        : "Item has been removed from your cart",
     });
   };
   
@@ -80,6 +96,10 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   
   const clearCart = () => {
     setCart([]);
+    toast({
+      title: "Cart cleared",
+      description: "All items have been removed from your cart",
+    });
   };
   
   const getCartTotal = () => {

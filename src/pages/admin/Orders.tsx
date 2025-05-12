@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -186,11 +185,15 @@ const OrdersPage = () => {
     }
   }, [statusFilter, user, isAdmin, authLoading]);
 
+  // Make sure the updateOrderStatus function properly updates the local state:
   const updateOrderStatus = async (orderId: string, newStatus: string) => {
     try {
       const { error } = await supabase
         .from('orders')
-        .update({ status: newStatus })
+        .update({ 
+          status: newStatus,
+          updated_at: new Date().toISOString() 
+        })
         .eq('id', orderId);
         
       if (error) throw error;

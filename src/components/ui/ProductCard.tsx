@@ -2,6 +2,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Heart } from 'lucide-react';
+import { toast } from '@/components/ui/use-toast';
+import { useCart } from '@/hooks/useCart';
 
 interface ProductCardProps {
   id: string;
@@ -23,6 +25,25 @@ const ProductCard: React.FC<ProductCardProps> = ({
   discountPercent 
 }) => {
   const hasDiscount = originalPrice && discountPercent && originalPrice > price;
+  const { addToCart } = useCart();
+
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    addToCart({
+      id,
+      name,
+      price,
+      image,
+      quantity: 1
+    });
+    
+    toast({
+      title: "Added to cart",
+      description: `${name} has been added to your cart`,
+    });
+  };
 
   return (
     <div className="group relative card-shadow rounded-md overflow-hidden bg-white animate-zoom-in">
@@ -68,13 +89,19 @@ const ProductCard: React.FC<ProductCardProps> = ({
         </div>
         
         {/* Quick Shop Button that appears on hover */}
-        <div className="mt-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+        <div className="mt-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex space-x-2">
           <Link 
             to={`/product/${id}`}
-            className="btn-primary w-full block text-center"
+            className="btn-primary flex-1 block text-center"
           >
             Quick Shop
           </Link>
+          <button
+            onClick={handleAddToCart}
+            className="btn-secondary flex-1 block text-center"
+          >
+            Add to Cart
+          </button>
         </div>
       </div>
     </div>

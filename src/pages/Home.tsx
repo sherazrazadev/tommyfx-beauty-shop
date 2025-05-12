@@ -1,9 +1,9 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
 import TestimonialSection from '@/components/testimonials/TestimonialSection';
+import ProductCard from '@/components/products/ProductCard';
 
 const Home = () => {
   return (
@@ -41,53 +41,32 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Featured Categories */}
-      <section className="py-16">
-        <div className="container-custom px-4">
-          <h2 className="text-3xl font-bold text-center mb-12">Shop by Category</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            <div className="bg-white rounded-lg shadow hover:shadow-md transition-shadow">
-              <img src="/placeholder.svg" alt="Skin Care" className="w-full h-48 object-cover rounded-t-lg" />
-              <div className="p-4">
-                <h3 className="font-medium text-lg mb-2">Skin Care</h3>
-                <Link to="/categories?category=skincare" className="text-tommyfx-blue hover:underline text-sm">
-                  View Products
-                </Link>
-              </div>
-            </div>
-            <div className="bg-white rounded-lg shadow hover:shadow-md transition-shadow">
-              <img src="/placeholder.svg" alt="Make-up" className="w-full h-48 object-cover rounded-t-lg" />
-              <div className="p-4">
-                <h3 className="font-medium text-lg mb-2">Make-up</h3>
-                <Link to="/categories?category=makeup" className="text-tommyfx-blue hover:underline text-sm">
-                  View Products
-                </Link>
-              </div>
-            </div>
-            <div className="bg-white rounded-lg shadow hover:shadow-md transition-shadow">
-              <img src="/placeholder.svg" alt="Hair Care" className="w-full h-48 object-cover rounded-t-lg" />
-              <div className="p-4">
-                <h3 className="font-medium text-lg mb-2">Hair Care</h3>
-                <Link to="/categories?category=haircare" className="text-tommyfx-blue hover:underline text-sm">
-                  View Products
-                </Link>
-              </div>
-            </div>
-            <div className="bg-white rounded-lg shadow hover:shadow-md transition-shadow">
-              <img src="/placeholder.svg" alt="Fragrance" className="w-full h-48 object-cover rounded-t-lg" />
-              <div className="p-4">
-                <h3 className="font-medium text-lg mb-2">Fragrance</h3>
-                <Link to="/categories?category=fragrance" className="text-tommyfx-blue hover:underline text-sm">
-                  View Products
-                </Link>
-              </div>
-            </div>
+      {/* Featured Products Section */}
+      <section className="py-16 bg-gray-50">
+        <div className="container-custom">
+          <h2 className="text-3xl font-bold text-center mb-12">Featured Products</h2>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {featuredProducts.map(product => (
+              <ProductCard
+                key={product.id}
+                id={product.id}
+                name={product.name}
+                price={product.price}
+                image={product.image_url || '/placeholder.svg'}
+                category={product.category}
+                originalPrice={product.original_price}
+                discountPercent={product.discount_percent}
+              />
+            ))}
           </div>
+          
           <div className="text-center mt-10">
-            <Link to="/categories">
-              <Button>
-                View All Categories <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
+            <Link 
+              to="/products" 
+              className="btn-primary"
+            >
+              View All Products
             </Link>
           </div>
         </div>
