@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useRef } from 'react';
 import TestimonialCard from '../ui/TestimonialCard';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -23,6 +24,8 @@ const TestimonialSection = () => {
 
   // Listen for real-time feedback updates
   useEffect(() => {
+    console.log("Setting up realtime subscription for feedback table");
+    
     const channel = supabase
       .channel('public:feedback')
       .on('postgres_changes', 
@@ -32,8 +35,8 @@ const TestimonialSection = () => {
           table: 'feedback',
           filter: 'approved=eq.true'
         }, 
-        () => {
-          console.log('New feedback detected, refreshing...');
+        (payload) => {
+          console.log('Realtime feedback update received:', payload);
           fetchApprovedFeedback();
         }
       )

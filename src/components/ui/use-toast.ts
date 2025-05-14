@@ -10,10 +10,15 @@ import { supabase } from "@/integrations/supabase/client";
 (async () => {
   try {
     // Enable realtime for the feedback table
-    await supabase.rpc('supabase_realtime', { 
-      table: 'feedback',
-      action: 'subscribe'
-    });
+    await supabase.channel('public:feedback')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'feedback' 
+      }, () => {
+        console.log('Feedback table changed');
+      })
+      .subscribe();
     
     console.log('Realtime enabled for feedback table');
   } catch (error) {

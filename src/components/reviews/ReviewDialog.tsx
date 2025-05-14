@@ -86,7 +86,7 @@ const ReviewDialog: React.FC<ReviewDialogProps> = ({
       
       onClose();
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error submitting review:', error);
       toast({
         title: "Submission failed",
