@@ -53,12 +53,14 @@ type Order = {
   shipping_city: string | null;
   shipping_state: string | null;
   shipping_zip: string | null;
+  shipping_country?: string | null;
   payment_method: string | null;
-  phone: string | null;
+  phone?: string | null; // Make phone optional
   user_id: string | null;
   user_name?: string | null;
   user_email?: string | null;
   items_count?: number;
+  updated_at?: string | null;
 };
 
 const statusColors: Record<string, string> = {
@@ -156,14 +158,15 @@ const OrdersPage = () => {
             // Get user data if available
             const userData = order.user_id ? userProfiles[order.user_id] : null;
             
-            // Ensure we include the phone property explicitly
-            return {
-              ...order,
+            // Cast the order data to our Order type and add the additional properties
+            const enrichedOrder: Order = {
+              ...order as any, // Cast to any first to avoid TypeScript errors
               user_name: userData?.full_name || 'Guest',
               user_email: userData?.email || 'No email',
               items_count: count || 0,
-              phone: order.phone || null
-            } as Order;
+            };
+            
+            return enrichedOrder;
           })
         );
         

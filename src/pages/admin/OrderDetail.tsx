@@ -27,6 +27,7 @@ interface OrderItem {
   price: number;
 }
 
+// Update the Order interface to match what's coming from the database
 interface Order {
   id: string;
   created_at: string;
@@ -38,8 +39,9 @@ interface Order {
   shipping_state: string;
   shipping_zip: string;
   shipping_country: string;
-  phone: string | null;
+  phone?: string | null; // Make phone optional with nullable type
   user_id?: string | null;
+  updated_at?: string;
 }
 
 interface CustomerProfile {
@@ -95,11 +97,9 @@ const OrderDetail = () => {
         
         if (orderData) {
           console.log('Order data retrieved:', orderData);
-          // Make sure we handle phone property correctly
-          const orderWithDefaults: Order = {
-            ...orderData,
-            phone: orderData.phone || null
-          } as Order;
+          
+          // Cast the order data to our Order type
+          const orderWithDefaults = orderData as unknown as Order;
           
           setOrder(orderWithDefaults);
           setCurrentStatus(orderWithDefaults.status as OrderStatus);
