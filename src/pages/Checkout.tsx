@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '@/hooks/useCart';
@@ -17,6 +18,7 @@ const Checkout = () => {
   const [formData, setFormData] = useState({
     name: user?.user_metadata?.full_name || '',
     email: user?.email || '',
+    phone: '',
     address: '',
     city: '',
     state: '',
@@ -32,6 +34,7 @@ const Checkout = () => {
       setFormData({
         name: user.user_metadata?.full_name || '',
         email: user.email || '',
+        phone: '',
         address: '',
         city: '',
         state: '',
@@ -55,6 +58,15 @@ const Checkout = () => {
       return;
     }
 
+    if (!formData.phone) {
+      toast({
+        title: "Phone number required",
+        description: "Please provide your phone number for delivery coordination.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setProcessing(true);
     try {
       // Create a new order in the database
@@ -70,6 +82,7 @@ const Checkout = () => {
             shipping_city: formData.city,
             shipping_state: formData.state,
             shipping_zip: formData.zip,
+            phone: formData.phone, // Add phone to order
           }
         ])
         .select()
@@ -203,6 +216,18 @@ const Checkout = () => {
                 />
               </div>
               <div>
+                <Label htmlFor="phone">Phone Number *</Label>
+                <Input
+                  type="tel"
+                  id="phone"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  placeholder="(123) 456-7890"
+                  required
+                />
+              </div>
+              <div>
                 <Label htmlFor="address">Address</Label>
                 <Input
                   type="text"
@@ -248,7 +273,11 @@ const Checkout = () => {
                   required
                 />
               </div>
-              <Button disabled={processing} className="w-full">
+              <Button 
+                type="submit" 
+                disabled={processing}
+                className="w-full"
+              >
                 {processing ? "Processing..." : "Place Order"}
               </Button>
             </form>

@@ -229,6 +229,7 @@ const ProductDetail = () => {
         description: "Your review will appear after approval by an administrator.",
       });
       await fetchReviews(id);
+      setReviewDialogOpen(false);
     }
   };
 

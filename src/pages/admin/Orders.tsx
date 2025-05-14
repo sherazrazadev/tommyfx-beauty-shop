@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -53,6 +54,7 @@ type Order = {
   shipping_state: string | null;
   shipping_zip: string | null;
   payment_method: string | null;
+  phone: string | null;
   user_id: string | null;
   user_name?: string | null;
   user_email?: string | null;
@@ -185,7 +187,7 @@ const OrdersPage = () => {
     }
   }, [statusFilter, user, isAdmin, authLoading]);
 
-  // Updated updateOrderStatus function to handle status updates correctly
+  // Fix: Properly update order status and ensure it persists
   const updateOrderStatus = async (orderId: string, newStatus: string) => {
     try {
       console.log(`Updating order ${orderId} status to ${newStatus}`);
@@ -206,7 +208,7 @@ const OrdersPage = () => {
       
       console.log('Update response:', data);
       
-      // Update local state
+      // Update local state after successful database update
       setOrders(prev => 
         prev.map(order => 
           order.id === orderId ? { ...order, status: newStatus } : order
@@ -233,7 +235,8 @@ const OrdersPage = () => {
         order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
         order.user_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         order.user_email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        order.shipping_city?.toLowerCase().includes(searchQuery.toLowerCase())
+        order.shipping_city?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        order.phone?.toLowerCase().includes(searchQuery.toLowerCase())
       )
     : orders;
     
@@ -348,12 +351,15 @@ const OrdersPage = () => {
                         <div>
                           <div className="font-medium">{order.user_name}</div>
                           <div className="text-sm text-gray-500">{order.user_email}</div>
+                          {order.phone && (
+                            <div className="text-sm text-gray-500">{order.phone}</div>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>{formatDate(order.created_at)}</TableCell>
                       <TableCell>
                         <Select
-                          defaultValue={order.status}
+                          value={order.status}
                           onValueChange={(value) => updateOrderStatus(order.id, value)}
                         >
                           <SelectTrigger className="h-8 w-[120px]">

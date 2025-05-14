@@ -188,7 +188,7 @@ const ProductForm = () => {
       description,
       category,
       image_url: imageUrl || (additionalImages.length > 0 ? additionalImages[0] : null),
-      additional_images: additionalImages.length > 0 ? additionalImages : null,
+      additional_images: additionalImages, // Add additional images array to the database
       stock: stockValue,
       updated_at: new Date().toISOString(),
       original_price: originalPrice ? parseFloat(originalPrice) : numericPrice,
@@ -373,7 +373,7 @@ const ProductForm = () => {
             
             {/* Primary Image URL */}
             <div className="space-y-2">
-              <Label htmlFor="image_url">Main Image URL</Label>
+              <Label htmlFor="image_url">Image URL</Label>
               <div className="flex space-x-2">
                 <Input 
                   id="image_url" 
@@ -390,6 +390,7 @@ const ProductForm = () => {
                   <Plus size={16} className="mr-2" /> Add to Gallery
                 </Button>
               </div>
+              <p className="text-sm text-gray-500">Add multiple images to the product gallery.</p>
             </div>
             
             {/* Image Gallery */}
