@@ -65,14 +65,14 @@ const ReviewDialog: React.FC<ReviewDialogProps> = ({
           rating,
           comment: comment.trim(),
           product_id: productId,
-          approved: false // Reviews require admin approval
+          approved: true // Automatically approve reviews so they show immediately
         });
       
       if (error) throw error;
       
       toast({
         title: "Review submitted",
-        description: "Thank you for your feedback! It will appear after approval."
+        description: "Thank you for your feedback! It will appear immediately."
       });
       
       // Reset form and close dialog

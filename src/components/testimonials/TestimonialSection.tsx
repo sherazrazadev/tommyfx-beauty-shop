@@ -1,9 +1,9 @@
-
 import React, { useEffect, useState, useRef } from 'react';
 import TestimonialCard from '../ui/TestimonialCard';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
 
 export type Testimonial = {
   id: string;
@@ -12,93 +12,121 @@ export type Testimonial = {
   content: string;
   rating: number;
   product_name?: string;
+  date?: string;
 };
 
 const TestimonialSection = () => {
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
   const [loading, setLoading] = useState(true);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
+
+  // Listen for real-time feedback updates
+  useEffect(() => {
+    const channel = supabase
+      .channel('public:feedback')
+      .on('postgres_changes', 
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'feedback',
+          filter: 'approved=eq.true'
+        }, 
+        () => {
+          console.log('New feedback detected, refreshing...');
+          fetchApprovedFeedback();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const fetchApprovedFeedback = async () => {
+    try {
+      console.log("Fetching approved testimonials...");
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('feedback')
+        .select(`
+          id, 
+          comment, 
+          rating,
+          user_id,
+          product_id,
+          created_at,
+          products(name)
+        `)
+        .eq('approved', true)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (error) {
+        console.error("Error fetching testimonials:", error);
+        throw error;
+      }
+      
+      console.log("Feedback entries fetched:", data?.length || 0);
+      
+      // Map the data to the Testimonial type
+      let mappedTestimonials: Testimonial[] = (data || []).map(item => ({
+        id: item.id,
+        author: 'Anonymous Customer', // Default name, will update if profile found
+        role: item.products?.name ? `on ${item.products.name}` : 'on TommyFX Beauty',
+        content: item.comment,
+        rating: item.rating,
+        product_name: item.products?.name,
+        date: new Date(item.created_at).toLocaleDateString()
+      }));
+
+      // If we have user IDs, fetch their profiles
+      const userIds = data
+        ?.map(item => item.user_id)
+        .filter((id): id is string => id != null);
+
+      if (userIds && userIds.length > 0) {
+        console.log("Fetching user profiles for testimonials...");
+        const { data: profilesData, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, full_name')
+          .in('id', userIds);
+
+        if (profilesError) {
+          console.error("Error fetching profiles:", profilesError);
+        } else if (profilesData) {
+          // Create a lookup map for profiles
+          const profileMap: Record<string, { full_name: string }> = {};
+          profilesData.forEach(profile => {
+            profileMap[profile.id] = profile;
+          });
+
+          // Update testimonials with author names from profiles
+          mappedTestimonials = mappedTestimonials.map(testimonial => {
+            const feedbackItem = data?.find(item => item.id === testimonial.id);
+            if (feedbackItem?.user_id && profileMap[feedbackItem.user_id]) {
+              return {
+                ...testimonial,
+                author: profileMap[feedbackItem.user_id].full_name || 'Anonymous Customer'
+              };
+            }
+            return testimonial;
+          });
+        }
+      }
+
+      console.log('Processed testimonials:', mappedTestimonials);
+      setTestimonials(mappedTestimonials);
+    } catch (error) {
+      console.error('Error fetching testimonials:', error);
+      setTestimonials([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchApprovedFeedback = async () => {
-      try {
-        console.log("Fetching approved testimonials...");
-        const { data, error } = await supabase
-          .from('feedback')
-          .select(`
-            id, 
-            comment, 
-            rating,
-            user_id,
-            product_id, 
-            products(name)
-          `)
-          .eq('approved', true)
-          .order('created_at', { ascending: false })
-          .limit(10);
-
-        if (error) {
-          console.error("Error fetching testimonials:", error);
-          throw error;
-        }
-        
-        console.log("Feedback entries fetched:", data?.length || 0);
-        
-        // Map the data to the Testimonial type
-        let mappedTestimonials: Testimonial[] = (data || []).map(item => ({
-          id: item.id,
-          author: 'Anonymous Customer', // Default name, will update if profile found
-          role: item.products?.name ? `on ${item.products.name}` : 'on TommyFX Beauty',
-          content: item.comment,
-          rating: item.rating,
-          product_name: item.products?.name
-        }));
-
-        // If we have user IDs, fetch their profiles
-        const userIds = data
-          ?.map(item => item.user_id)
-          .filter((id): id is string => id != null);
-
-        if (userIds && userIds.length > 0) {
-          console.log("Fetching user profiles for testimonials...");
-          const { data: profilesData, error: profilesError } = await supabase
-            .from('profiles')
-            .select('id, full_name')
-            .in('id', userIds);
-
-          if (profilesError) {
-            console.error("Error fetching profiles:", profilesError);
-          } else if (profilesData) {
-            // Create a lookup map for profiles
-            const profileMap: Record<string, { full_name: string }> = {};
-            profilesData.forEach(profile => {
-              profileMap[profile.id] = profile;
-            });
-
-            // Update testimonials with author names from profiles
-            mappedTestimonials = mappedTestimonials.map(testimonial => {
-              const feedbackItem = data?.find(item => item.id === testimonial.id);
-              if (feedbackItem?.user_id && profileMap[feedbackItem.user_id]) {
-                return {
-                  ...testimonial,
-                  author: profileMap[feedbackItem.user_id].full_name || 'Anonymous Customer'
-                };
-              }
-              return testimonial;
-            });
-          }
-        }
-
-        console.log('Processed testimonials:', mappedTestimonials);
-        setTestimonials(mappedTestimonials);
-      } catch (error) {
-        console.error('Error fetching testimonials:', error);
-        setTestimonials([]);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchApprovedFeedback();
   }, []);
 
@@ -167,7 +195,7 @@ const TestimonialSection = () => {
                     name={testimonial.author}
                     rating={testimonial.rating}
                     comment={testimonial.content}
-                    date={testimonial.role}
+                    date={testimonial.date || testimonial.role}
                   />
                 </div>
               ))}
