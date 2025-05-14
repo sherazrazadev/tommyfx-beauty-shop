@@ -194,7 +194,7 @@ const Checkout = () => {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <Label htmlFor="name">Full Name</Label>
+                <Label htmlFor="name">Full Name *</Label>
                 <Input
                   type="text"
                   id="name"
@@ -205,14 +205,14 @@ const Checkout = () => {
                 />
               </div>
               <div>
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">Email *</Label>
                 <Input
                   type="email"
                   id="email"
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
-                  required={checkoutAsGuest}
+                  required
                 />
               </div>
               <div>
@@ -228,7 +228,7 @@ const Checkout = () => {
                 />
               </div>
               <div>
-                <Label htmlFor="address">Address</Label>
+                <Label htmlFor="address">Address *</Label>
                 <Input
                   type="text"
                   id="address"
@@ -240,7 +240,7 @@ const Checkout = () => {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="city">City</Label>
+                  <Label htmlFor="city">City *</Label>
                   <Input
                     type="text"
                     id="city"
@@ -251,7 +251,7 @@ const Checkout = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="state">State</Label>
+                  <Label htmlFor="state">State *</Label>
                   <Input
                     type="text"
                     id="state"
@@ -263,7 +263,7 @@ const Checkout = () => {
                 </div>
               </div>
               <div>
-                <Label htmlFor="zip">ZIP Code</Label>
+                <Label htmlFor="zip">ZIP Code *</Label>
                 <Input
                   type="text"
                   id="zip"

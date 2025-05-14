@@ -1,6 +1,7 @@
+
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ChevronRight, ArrowLeft } from 'lucide-react';
+import { ChevronRight, ArrowLeft, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -9,7 +10,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import AdminLayout from '@/components/layout/AdminLayout';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 type OrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
 
@@ -31,6 +38,7 @@ interface Order {
   shipping_state: string;
   shipping_zip: string;
   shipping_country: string;
+  phone: string | null;
 }
 
 interface CustomerProfile {
@@ -62,6 +70,7 @@ const OrderDetail = () => {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [currentStatus, setCurrentStatus] = useState<OrderStatus>('pending');
+  const [statusChanged, setStatusChanged] = useState(false);
 
   useEffect(() => {
     const fetchOrderDetails = async () => {
@@ -125,18 +134,25 @@ const OrderDetail = () => {
     fetchOrderDetails();
   }, [id]);
 
-  const updateOrderStatus = async (newStatus: OrderStatus) => {
-    if (!id || newStatus === currentStatus) return;
+  const handleStatusChange = (newStatus: OrderStatus) => {
+    if (newStatus !== currentStatus) {
+      setCurrentStatus(newStatus);
+      setStatusChanged(true);
+    }
+  };
+
+  const updateOrderStatus = async () => {
+    if (!id || !statusChanged) return;
     
     setUpdating(true);
     try {
-      console.log(`Updating order ${id} status to ${newStatus}`);
+      console.log(`Updating order ${id} status to ${currentStatus}`);
       
       // Update database
       const { data, error } = await supabase
         .from('orders')
         .update({ 
-          status: newStatus,
+          status: currentStatus,
           updated_at: new Date().toISOString()
         })
         .eq('id', id)
@@ -150,12 +166,12 @@ const OrderDetail = () => {
       console.log('Update response:', data);
       
       // Update local state and order object
-      setCurrentStatus(newStatus);
-      setOrder(prev => prev ? {...prev, status: newStatus} : null);
+      setOrder(prev => prev ? {...prev, status: currentStatus} : null);
+      setStatusChanged(false);
       
       toast({
         title: 'Status Updated',
-        description: `Order status changed to ${newStatus}`,
+        description: `Order status changed to ${currentStatus}`,
       });
     } catch (error) {
       console.error('Error updating order status:', error);
@@ -258,22 +274,36 @@ const OrderDetail = () => {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-500">Status:</span>
-                  <Select
-                    value={currentStatus}
-                    onValueChange={(value) => updateOrderStatus(value as OrderStatus)}
-                    disabled={updating}
-                  >
-                    <SelectTrigger className="w-32">
-                      <SelectValue placeholder="Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="processing">Processing</SelectItem>
-                      <SelectItem value="shipped">Shipped</SelectItem>
-                      <SelectItem value="delivered">Delivered</SelectItem>
-                      <SelectItem value="cancelled">Cancelled</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="flex items-center gap-2">
+                    <Select
+                      value={currentStatus}
+                      onValueChange={(value) => handleStatusChange(value as OrderStatus)}
+                      disabled={updating}
+                    >
+                      <SelectTrigger className="w-32">
+                        <SelectValue placeholder="Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="processing">Processing</SelectItem>
+                        <SelectItem value="shipped">Shipped</SelectItem>
+                        <SelectItem value="delivered">Delivered</SelectItem>
+                        <SelectItem value="cancelled">Cancelled</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    
+                    {statusChanged && (
+                      <Button 
+                        size="sm" 
+                        onClick={updateOrderStatus} 
+                        disabled={updating}
+                        className="flex items-center gap-1"
+                      >
+                        <Save className="w-4 h-4" />
+                        Save
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -296,7 +326,7 @@ const OrderDetail = () => {
                 </div>
                 <div>
                   <span className="text-gray-500">Phone:</span>
-                  <p className="font-medium">{customer?.phone || 'Not provided'}</p>
+                  <p className="font-medium">{order.phone || customer?.phone || 'Not provided'}</p>
                 </div>
               </div>
             </CardContent>

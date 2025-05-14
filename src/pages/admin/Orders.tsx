@@ -157,11 +157,11 @@ const OrdersPage = () => {
             const userData = order.user_id ? userProfiles[order.user_id] : null;
             
             return {
-              ...order,
+              ...order, // This ensures we include all properties from the original order
               user_name: userData?.full_name || 'Guest',
               user_email: userData?.email || 'No email',
               items_count: count || 0
-            };
+            } as Order; // Type assertion to ensure it matches the Order type
           })
         );
         
