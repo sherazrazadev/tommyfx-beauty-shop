@@ -39,6 +39,7 @@ interface Order {
   shipping_zip: string;
   shipping_country: string;
   phone: string | null;
+  user_id?: string | null;
 }
 
 interface CustomerProfile {
@@ -94,8 +95,14 @@ const OrderDetail = () => {
         
         if (orderData) {
           console.log('Order data retrieved:', orderData);
-          setOrder(orderData as Order);
-          setCurrentStatus(orderData.status as OrderStatus);
+          // Make sure we handle phone property correctly
+          const orderWithDefaults: Order = {
+            ...orderData,
+            phone: orderData.phone || null
+          } as Order;
+          
+          setOrder(orderWithDefaults);
+          setCurrentStatus(orderWithDefaults.status as OrderStatus);
           
           // Fetch order items
           const { data: itemsData, error: itemsError } = await supabase
@@ -166,7 +173,12 @@ const OrderDetail = () => {
       console.log('Update response:', data);
       
       // Update local state and order object
-      setOrder(prev => prev ? {...prev, status: currentStatus} : null);
+      if (order) {
+        setOrder({
+          ...order,
+          status: currentStatus
+        });
+      }
       setStatusChanged(false);
       
       toast({
