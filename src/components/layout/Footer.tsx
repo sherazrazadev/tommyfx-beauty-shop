@@ -33,7 +33,7 @@ const Footer = () => {
               Tommy<span className="text-tommyfx-blue">FX</span>
             </h4>
             <p className="text-gray-300 mb-4">
-              Premium beauty products designed to enhance your natural beauty and boost your confidence.
+              Where skincare meets perfection! Start with our powerful serums and get ready for the glow-up of a lifetime!
             </p>
             <div className="flex space-x-4">
               <a href="#" className="text-gray-300 hover:text-tommyfx-blue">
@@ -109,16 +109,16 @@ const Footer = () => {
               <li className="flex items-start">
                 <MapPin size={20} className="mr-3 mt-1 text-tommyfx-blue flex-shrink-0" />
                 <span className="text-gray-300">
-                  123 Beauty Lane, Fashion District, New York, NY 10001
+                  Lahore , Punjab , Pakistan
                 </span>
               </li>
               <li className="flex items-center">
                 <Phone size={20} className="mr-3 text-tommyfx-blue flex-shrink-0" />
-                <span className="text-gray-300">+1 (555) 123-4567</span>
+                <span className="text-gray-300">+92 (306) 714-5010</span>
               </li>
               <li className="flex items-center">
                 <Mail size={20} className="mr-3 text-tommyfx-blue flex-shrink-0" />
-                <span className="text-gray-300">contact@tommyfx.com</span>
+                <span className="text-gray-300">tommyfx.pk@gmail.com</span>
               </li>
             </ul>
           </div>

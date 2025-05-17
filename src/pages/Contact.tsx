@@ -46,8 +46,7 @@ const Contact = () => {
                     <div>
                       <h3 className="font-medium">Visit Us</h3>
                       <address className="text-gray-600 not-italic">
-                        123 Beauty Lane, Fashion District<br />
-                        New York, NY 10001
+                        Lahore , Punjab ,Pakistan
                       </address>
                     </div>
                   </div>
@@ -58,7 +57,7 @@ const Contact = () => {
                       <h3 className="font-medium">Call Us</h3>
                       <p className="text-gray-600">
                         <a href="tel:+15551234567" className="hover:text-tommyfx-blue">
-                          +1 (555) 123-4567
+                          +92 (306) 714-5010
                         </a>
                       </p>
                     </div>
@@ -69,7 +68,7 @@ const Contact = () => {
                     <div>
                       <h3 className="font-medium">Email Us</h3>
                       <p className="text-gray-600">
-                        <a href="mailto:contact@tommyfx.com" className="hover:text-tommyfx-blue">
+                        <a href="mailto:tommyfx.pk@gmail.com" className="hover:text-tommyfx-blue">
                           contact@tommyfx.com
                         </a>
                       </p>
@@ -81,7 +80,7 @@ const Contact = () => {
                     <div>
                       <h3 className="font-medium">Business Hours</h3>
                       <p className="text-gray-600">
-                        Monday - Friday: 9am - 6pm<br />
+                        {/* Monday - Friday: 9am - 6pm<br /> */}
                         Saturday: 10am - 4pm<br />
                         Sunday: Closed
                       </p>

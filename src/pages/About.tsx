@@ -121,18 +121,18 @@ const About = () => {
               <div className="rounded-lg overflow-hidden mb-4">
                 <img 
                   src="https://source.unsplash.com/IF9TK5Uy-KI" 
-                  alt="Thomas Fox" 
+                  alt="Amir Ali" 
                   className="w-full aspect-square object-cover" 
                 />
               </div>
-              <h3 className="text-xl font-bold">Thomas Fox</h3>
+              <h3 className="text-xl font-bold">Aamir Ali</h3>
               <p className="text-tommyfx-blue mb-3">Founder & CEO</p>
               <p className="text-gray-700">
                 Beauty enthusiast and skincare specialist with over 15 years of industry experience.
               </p>
             </div>
             
-            <div className="text-center">
+            {/* <div className="text-center">
               <div className="rounded-lg overflow-hidden mb-4">
                 <img 
                   src="https://source.unsplash.com/rDEOVtE7vOs" 
@@ -145,8 +145,8 @@ const About = () => {
               <p className="text-gray-700">
                 Cosmetic chemist with a passion for creating innovative, effective formulations.
               </p>
-            </div>
-            
+            </div> */}
+{/*             
             <div className="text-center">
               <div className="rounded-lg overflow-hidden mb-4">
                 <img 
@@ -160,7 +160,7 @@ const About = () => {
               <p className="text-gray-700">
                 Visionary designer driving TommyFX's distinctive aesthetic and brand identity.
               </p>
-            </div>
+            </div> */}
           </div>
         </div>
       </section>

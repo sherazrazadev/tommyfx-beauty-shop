@@ -414,11 +414,13 @@ const Profile = () => {
                       onChange={handleChange}
                       className="w-full p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-tommyfx-blue"
                     >
+                      <option value="Pakistan">Pakistan</option>
                       <option value="United States">United States</option>
                       <option value="Canada">Canada</option>
                       <option value="United Kingdom">United Kingdom</option>
                       <option value="Australia">Australia</option>
                       <option value="Germany">Germany</option>
+
                     </select>
                   </div>
                 </div>
