@@ -41,12 +41,13 @@ const ProductDetail = () => {
   const [product, setProduct] = useState<any>(null);
   const [reviews, setReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const { addToCart } = useCart();
   const { user } = useAuth();
   const { addToWishlist, isInWishlist, removeFromWishlist } = useWishlist();
-  
+  // Add these state variables at the top of your component:
+  const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
+
   useEffect(() => {
     const fetchProduct = async () => {
       setLoading(true);
@@ -106,6 +107,26 @@ const ProductDetail = () => {
     fetchProduct();
   }, [id]);
   
+
+
+  const incrementQuantity = () => setQuantity(prev => prev + 1);
+  const decrementQuantity = () => setQuantity(prev => (prev > 1 ? prev - 1 : 1));
+
+  const handleAddToCart = () => {
+    if (product) {
+      addToCart({
+        id: product.id,
+        name: product.name,
+        price: product.discount_price ? product.discount_price : product.price,
+        image: product.image_url,
+        quantity
+      });
+      toast({
+        title: "Added to cart",
+        description: `${quantity} x ${product.name} added to your cart`,
+      });
+    }
+  };
   const fetchReviews = async (productId: string) => {
     try {
       // Get approved feedback for this product
@@ -166,26 +187,6 @@ const ProductDetail = () => {
       console.error('Error fetching reviews:', error);
     }
   };
-
-  const incrementQuantity = () => setQuantity(prev => prev + 1);
-  const decrementQuantity = () => setQuantity(prev => (prev > 1 ? prev - 1 : 1));
-
-  const handleAddToCart = () => {
-    if (product) {
-      addToCart({
-        id: product.id,
-        name: product.name,
-        price: product.discount_price ? product.discount_price : product.price,
-        image: product.image_url,
-        quantity
-      });
-      toast({
-        title: "Added to cart",
-        description: `${quantity} x ${product.name} added to your cart`,
-      });
-    }
-  };
-  
   const handleOpenReviewDialog = () => {
     if (!user) {
       toast({
@@ -329,13 +330,23 @@ const ProductDetail = () => {
                 ))}
               </div>
             </div>
-
+            {/* Review Dialog */}
+            {product && (
+              <ReviewDialog 
+                isOpen={reviewDialogOpen}
+                onClose={() => setReviewDialogOpen(false)}
+                productId={id || ''}
+                productName={product?.name || 'Product'}
+                onReviewSubmitted={handleReviewSubmitted}
+              />
+            )}
             {/* Product Info */}
             <div>
               <span className="text-tommyfx-blue uppercase text-sm font-medium tracking-wide">
                 {product.category || 'Product'}
               </span>
-              <h1 className="text-3xl font-bold mt-2 mb-4">{product.name}</h1>
+              <h1 className="text-3xl font-bold mt-2 mb-4">{product?.name || 'Product'}</h1>
+
               
               <div className="flex items-center mb-4">
                 <div className="flex">

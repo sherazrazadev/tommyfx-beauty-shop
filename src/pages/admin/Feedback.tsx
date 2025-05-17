@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight, MessageSquare, CheckCircle, XCircle, Trash2 } from 'lucide-react';
@@ -36,22 +35,33 @@ interface FeedbackItem {
   user_id?: string;
   product_id?: string;
   rating?: number;
+  product_name?: string;
 }
 
 const Feedback = () => {
   const [feedback, setFeedback] = useState<FeedbackItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [updating, setUpdating] = useState(false);
+  const [updating, setUpdating] = useState<string | null>(null); // Track which item is updating
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [feedbackToDelete, setFeedbackToDelete] = useState<string | null>(null);
 
+  // Function to fetch feedback that can be reused
   const fetchFeedback = async () => {
-    setLoading(true);
     try {
       console.log('Fetching feedback data...');
+      
       const { data: feedbackData, error } = await supabase
         .from('feedback')
-        .select('*')
+        .select(`
+          id, 
+          comment, 
+          rating,
+          user_id,
+          product_id,
+          created_at,
+          approved,
+          products(name)
+        `)
         .order('created_at', { ascending: false });
         
       if (error) {
@@ -59,10 +69,10 @@ const Feedback = () => {
         throw error;
       }
       
-      console.log('Feedback data fetched:', feedbackData);
+      console.log('Feedback data fetched:', feedbackData?.length, feedbackData);
       
-      // Map the Supabase data to our FeedbackItem interface
-      const mappedFeedback: FeedbackItem[] = [];
+      // Process user data for each feedback
+      const processedFeedback: FeedbackItem[] = [];
       
       for (const item of feedbackData || []) {
         let name = 'Anonymous User';
@@ -86,21 +96,28 @@ const Feedback = () => {
           }
         }
         
-        mappedFeedback.push({
+        // Make sure approved is correctly converted to boolean
+        const isApproved = item.approved === true;
+        console.log(`Feedback ${item.id} approved state:`, item.approved, isApproved);
+        
+        processedFeedback.push({
           id: item.id,
           created_at: item.created_at,
           name,
           email,
           message: item.comment,
-          approved: item.approved || false,
+          approved: isApproved,
           user_id: item.user_id,
           product_id: item.product_id,
-          rating: item.rating
+          rating: item.rating,
+          product_name: item.products?.name || 'General Feedback'
         });
       }
       
-      console.log('Mapped feedback:', mappedFeedback);
-      setFeedback(mappedFeedback);
+      console.log('Processed feedback:', processedFeedback);
+      setFeedback(processedFeedback);
+      setLoading(false);
+      
     } catch (error) {
       console.error('Error fetching feedback:', error);
       toast({
@@ -108,36 +125,40 @@ const Feedback = () => {
         description: 'Failed to load feedback data',
         variant: 'destructive'
       });
-    } finally {
       setLoading(false);
     }
   };
-  
+
+  // Initial data fetch when component mounts
   useEffect(() => {
+    setLoading(true);
     fetchFeedback();
   }, []);
 
+  // Function to update feedback approval status
   const updateFeedbackStatus = async (id: string, approved: boolean) => {
+    setUpdating(id); // Mark this specific item as updating
+    
     try {
-      setUpdating(true);
       console.log(`Updating feedback ${id} status to ${approved}`);
       
-      const { error } = await supabase
+      // Update the database
+      const { data, error } = await supabase
         .from('feedback')
-        .update({ 
-          approved, 
-          updated_at: new Date().toISOString() 
-        })
-        .eq('id', id);
+        .update({ approved })
+        .eq('id', id)
+        .select();
         
       if (error) {
         console.error('Error updating feedback status:', error);
         throw error;
       }
       
-      // Update local state without refetching
-      setFeedback(prev => 
-        prev.map(item => 
+      console.log('Update response:', data);
+      
+      // Update local state
+      setFeedback(currentFeedback => 
+        currentFeedback.map(item => 
           item.id === id ? { ...item, approved } : item
         )
       );
@@ -146,15 +167,38 @@ const Feedback = () => {
         title: approved ? "Feedback Approved" : "Feedback Unapproved",
         description: approved ? "Feedback is now public" : "Feedback has been hidden",
       });
-    } catch (error) {
+
+      // Verify the update in the database
+      const { data: verifyData, error: verifyError } = await supabase
+        .from('feedback')
+        .select('approved')
+        .eq('id', id)
+        .single();
+        
+      if (verifyError) {
+        console.error('Error verifying feedback update:', verifyError);
+      } else {
+        console.log(`Verification: Feedback ${id} approved is now:`, verifyData.approved);
+        
+        // If database state doesn't match what we expected, refresh the whole list
+        if (verifyData.approved !== approved) {
+          console.warn('Database state mismatch, refreshing all feedback');
+          fetchFeedback();
+        }
+      }
+      
+    } catch (error: any) {
       console.error('Error updating feedback status:', error);
       toast({
         title: "Error",
-        description: "Failed to update feedback status",
+        description: "Failed to update feedback status: " + (error.message || "Unknown error"),
         variant: "destructive"
       });
+      
+      // Refresh the data to ensure UI is in sync with database
+      fetchFeedback();
     } finally {
-      setUpdating(false);
+      setUpdating(null);
     }
   };
 
@@ -166,8 +210,9 @@ const Feedback = () => {
   const deleteFeedback = async () => {
     if (!feedbackToDelete) return;
     
+    setUpdating(feedbackToDelete);
+    
     try {
-      setUpdating(true);
       console.log(`Deleting feedback ${feedbackToDelete}`);
       
       const { error } = await supabase
@@ -180,13 +225,16 @@ const Feedback = () => {
         throw error;
       }
       
-      // Update local state without refetching
+      // Update local state
       setFeedback(prev => prev.filter(item => item.id !== feedbackToDelete));
       
       toast({
         title: "Feedback Deleted",
         description: "The feedback has been permanently removed",
       });
+      
+      setDeleteDialogOpen(false);
+      
     } catch (error) {
       console.error('Error deleting feedback:', error);
       toast({
@@ -194,10 +242,12 @@ const Feedback = () => {
         description: "Failed to delete feedback",
         variant: "destructive"
       });
+      
+      // Refresh data to ensure UI is in sync
+      fetchFeedback();
     } finally {
-      setUpdating(false);
+      setUpdating(null);
       setFeedbackToDelete(null);
-      setDeleteDialogOpen(false);
     }
   };
 
@@ -226,7 +276,7 @@ const Feedback = () => {
         </div>
         
         <div className="mb-4 flex justify-end">
-          <Button onClick={fetchFeedback} variant="outline" size="sm" disabled={loading}>
+          <Button onClick={fetchFeedback} variant="outline" size="sm" disabled={loading || updating !== null}>
             Refresh
           </Button>
         </div>
@@ -245,6 +295,7 @@ const Feedback = () => {
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
                   <TableHead>Message</TableHead>
+                  <TableHead>Product</TableHead>
                   <TableHead>Rating</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead className="w-14 text-center">Approved</TableHead>
@@ -258,6 +309,7 @@ const Feedback = () => {
                       <TableCell className="font-medium">{item.name}</TableCell>
                       <TableCell>{item.email}</TableCell>
                       <TableCell className="max-w-md break-words">{item.message}</TableCell>
+                      <TableCell>{item.product_name}</TableCell>
                       <TableCell>
                         {item.rating ? `${item.rating}/5` : 'N/A'}
                       </TableCell>
@@ -266,8 +318,9 @@ const Feedback = () => {
                         <Button
                           variant="ghost"
                           size="icon"
-                          disabled={updating}
+                          disabled={updating === item.id}
                           onClick={() => updateFeedbackStatus(item.id, !item.approved)}
+                          className={updating === item.id ? "opacity-50" : ""}
                         >
                           {item.approved ? (
                             <CheckCircle className="text-green-500" size={20} />
@@ -280,7 +333,7 @@ const Feedback = () => {
                         <Button
                           variant="ghost"
                           size="icon"
-                          disabled={updating}
+                          disabled={updating !== null}
                           onClick={() => handleDeleteClick(item.id)}
                           className="text-red-500 hover:text-red-700"
                         >
@@ -291,7 +344,7 @@ const Feedback = () => {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-6">
+                    <TableCell colSpan={8} className="text-center py-6">
                       No feedback found
                     </TableCell>
                   </TableRow>
@@ -312,13 +365,13 @@ const Feedback = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={updating}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={updating !== null}>Cancel</AlertDialogCancel>
             <AlertDialogAction 
               onClick={deleteFeedback}
               className="bg-red-500 hover:bg-red-600 focus:ring-red-500"
-              disabled={updating}
+              disabled={updating !== null}
             >
-              {updating ? 'Deleting...' : 'Delete'}
+              {updating === feedbackToDelete ? 'Deleting...' : 'Delete'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

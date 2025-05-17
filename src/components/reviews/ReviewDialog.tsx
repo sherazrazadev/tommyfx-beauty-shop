@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -7,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Star } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/use-toast';
 
 interface ReviewDialogProps {
   isOpen: boolean;
@@ -58,21 +57,24 @@ const ReviewDialog: React.FC<ReviewDialogProps> = ({
     setIsSubmitting(true);
     
     try {
-      const { error } = await supabase
+      // Insert the review into the database
+      const { data, error } = await supabase
         .from('feedback')
         .insert({
           user_id: user.id,
           rating,
           comment: comment.trim(),
           product_id: productId,
-          approved: true // Automatically approve reviews so they show immediately
-        });
+          approved: false, // Set to false initially so it requires admin approval
+          created_at: new Date().toISOString()
+        })
+        .select();
       
       if (error) throw error;
       
       toast({
         title: "Review submitted",
-        description: "Thank you for your feedback! It will appear immediately."
+        description: "Thank you for your feedback! It will appear after admin approval."
       });
       
       // Reset form and close dialog
@@ -82,12 +84,13 @@ const ReviewDialog: React.FC<ReviewDialogProps> = ({
       // Call the callback if provided
       if (onReviewSubmitted) {
         onReviewSubmitted();
+      } else {
+        onClose();
       }
       
-      onClose();
-      
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error submitting review:', error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
       toast({
         title: "Submission failed",
         description: "There was an error submitting your review. Please try again.",

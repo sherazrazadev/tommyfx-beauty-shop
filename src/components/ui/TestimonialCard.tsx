@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Star, Quote } from 'lucide-react';
 
@@ -8,6 +7,7 @@ interface TestimonialCardProps {
   comment: string;
   image?: string;
   date?: string;
+  product?: string;
 }
 
 const TestimonialCard: React.FC<TestimonialCardProps> = ({
@@ -16,6 +16,7 @@ const TestimonialCard: React.FC<TestimonialCardProps> = ({
   comment,
   image,
   date,
+  product,
 }) => {
   return (
     <div className="bg-white p-6 rounded-xl shadow-md h-full transform transition-all duration-300 hover:shadow-lg hover:-translate-y-1 flex flex-col relative">
@@ -53,7 +54,10 @@ const TestimonialCard: React.FC<TestimonialCardProps> = ({
         )}
         <div>
           <h4 className="font-semibold">{name}</h4>
-          {date && <p className="text-sm text-gray-500">{date}</p>}
+          <div className="text-sm text-gray-500">
+            {product && <span className="block">{product}</span>}
+            {date && <span>{date}</span>}
+          </div>
         </div>
       </div>
     </div>

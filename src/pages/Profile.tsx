@@ -28,9 +28,7 @@ const Profile = () => {
     rating: 5,
     comment: ''
   });
-  
   const [submittedFeedback, setSubmittedFeedback] = useState<any[]>([]);
-
   // Check for authentication and redirect if needed
   useEffect(() => {
     if (!authLoading && !user) {
@@ -142,11 +140,12 @@ const Profile = () => {
         title: "Profile updated",
         description: "Your profile has been updated successfully"
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error updating profile:', error);
+      
       toast({
         title: "Update failed",
-        description: error.message || "An error occurred while updating your profile",
+        description: "An error occurred while updating your profile",
         variant: "destructive"
       });
     } finally {
@@ -182,7 +181,8 @@ const Profile = () => {
         user_id: user.id,
         rating: feedbackData.rating,
         comment: feedbackData.comment,
-        approved: false // All feedback needs admin approval
+        approved: false, // All feedback needs admin approval
+        created_at: new Date().toISOString()
       }).select();
       
       if (error) throw error;
@@ -201,11 +201,11 @@ const Profile = () => {
         rating: 5,
         comment: ''
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error submitting feedback:', error);
       toast({
         title: "Submission failed",
-        description: error.message || "An error occurred while sending your feedback",
+        description: "An error occurred while sending your feedback",
         variant: "destructive"
       });
     } finally {
