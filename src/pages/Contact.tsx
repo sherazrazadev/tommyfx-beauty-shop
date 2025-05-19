@@ -1,14 +1,99 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronRight, Mail, Phone, MapPin, Clock, Send } from 'lucide-react';
+import { ChevronRight, Mail, Phone, MapPin, Clock, Send, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/components/ui/use-toast';
 
 const Contact = () => {
-  const handleSubmit = (e: React.FormEvent) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    subject: '',
+    message: ''
+  });
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Clear success message when user starts typing again
+    if (submitSuccess) {
+      setSubmitSuccess(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle form submission
-    console.log('Contact form submitted');
+    setIsSubmitting(true);
+    
+    // Validate form data
+    if (!formData.name || !formData.email || !formData.message) {
+      toast({
+        title: "Error",
+        description: "Please fill in all required fields",
+        variant: "destructive"
+      });
+      setIsSubmitting(false);
+      return;
+    }
+    
+    try {
+      // Using 'as any' to bypass TypeScript type checking for now
+      const { error } = await (supabase as any)
+        .from('contact_submissions')
+        .insert([
+          { 
+            name: formData.name,
+            email: formData.email,
+            subject: formData.subject || '',
+            message: formData.message
+          }
+        ]);
+      
+      if (error) throw error;
+      
+      // Show success state
+      setSubmitSuccess(true);
+      
+      // Reset form but keep the name and email in memory
+      const savedName = formData.name;
+      const savedEmail = formData.email;
+      setFormData({
+        name: savedName,
+        email: savedEmail,
+        subject: '',
+        message: ''
+      });
+      
+      // Enhanced success toast with custom content
+      toast({
+        title: "Message sent successfully!",
+        description: (
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2 text-green-600">
+              <CheckCircle className="h-5 w-5" />
+              <span className="font-medium">Your message has been received</span>
+            </div>
+            <p>Thanks {savedName}, we'll get back to you soon.</p>
+          </div>
+        ),
+        variant: "default",
+        duration: 5000, // Show for 5 seconds
+      });
+      
+    } catch (error: any) {
+      console.error('Error submitting contact form:', error);
+      toast({
+        title: "Error",
+        description: error.message || "There was an error sending your message",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -46,7 +131,7 @@ const Contact = () => {
                     <div>
                       <h3 className="font-medium">Visit Us</h3>
                       <address className="text-gray-600 not-italic">
-                        Lahore , Punjab ,Pakistan
+                        Lahore, Punjab, Pakistan
                       </address>
                     </div>
                   </div>
@@ -56,7 +141,7 @@ const Contact = () => {
                     <div>
                       <h3 className="font-medium">Call Us</h3>
                       <p className="text-gray-600">
-                        <a href="tel:+15551234567" className="hover:text-tommyfx-blue">
+                        <a href="tel:+923067145010" className="hover:text-tommyfx-blue">
                           +92 (306) 714-5010
                         </a>
                       </p>
@@ -69,7 +154,7 @@ const Contact = () => {
                       <h3 className="font-medium">Email Us</h3>
                       <p className="text-gray-600">
                         <a href="mailto:tommyfx.pk@gmail.com" className="hover:text-tommyfx-blue">
-                          contact@tommyfx.com
+                          tommyfx.pk@gmail.com
                         </a>
                       </p>
                     </div>
@@ -80,7 +165,6 @@ const Contact = () => {
                     <div>
                       <h3 className="font-medium">Business Hours</h3>
                       <p className="text-gray-600">
-                        {/* Monday - Friday: 9am - 6pm<br /> */}
                         Saturday: 10am - 4pm<br />
                         Sunday: Closed
                       </p>
@@ -95,22 +179,22 @@ const Contact = () => {
                   Stay updated with our latest products, tips, and promotions.
                 </p>
                 <div className="flex space-x-4">
-                  <a href="#" className="hover:opacity-80 transition-opacity">
+                  <a href="https://www.facebook.com/profile.php?id=61575684157555" target="_blank" rel="noopener noreferrer" className="hover:opacity-80 transition-opacity">
                     <div className="w-10 h-10 rounded-full bg-white bg-opacity-20 flex items-center justify-center">
                       F
                     </div>
                   </a>
-                  <a href="#" className="hover:opacity-80 transition-opacity">
+                  <a href="https://www.tiktok.com/@tommyfx.pk" target="_blank" rel="noopener noreferrer" className="hover:opacity-80 transition-opacity">
                     <div className="w-10 h-10 rounded-full bg-white bg-opacity-20 flex items-center justify-center">
                       T
                     </div>
                   </a>
-                  <a href="#" className="hover:opacity-80 transition-opacity">
+                  <a href="https://www.instagram.com/tommyfx.pk" target="_blank" rel="noopener noreferrer" className="hover:opacity-80 transition-opacity">
                     <div className="w-10 h-10 rounded-full bg-white bg-opacity-20 flex items-center justify-center">
                       I
                     </div>
                   </a>
-                  <a href="#" className="hover:opacity-80 transition-opacity">
+                  <a href="https://www.pinterest.com/tommyfx.pk" target="_blank" rel="noopener noreferrer" className="hover:opacity-80 transition-opacity">
                     <div className="w-10 h-10 rounded-full bg-white bg-opacity-20 flex items-center justify-center">
                       P
                     </div>
@@ -124,61 +208,96 @@ const Contact = () => {
               <div className="bg-white p-8 rounded-lg shadow-sm">
                 <h2 className="text-2xl font-bold mb-6">Send a Message</h2>
                 
-                <form onSubmit={handleSubmit}>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    <div>
-                      <label htmlFor="name" className="block mb-2 font-medium">
-                        Your Name*
+                {submitSuccess ? (
+                  <div className="bg-green-50 border border-green-100 rounded-lg p-6 text-center mb-6">
+                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-green-100 text-green-600 mb-4">
+                      <CheckCircle size={24} />
+                    </div>
+                    <h3 className="text-xl font-bold text-green-800 mb-2">Thank You!</h3>
+                    <p className="text-green-700 mb-4">
+                      Your message has been sent successfully. We'll get back to you as soon as possible.
+                    </p>
+                    <Button
+                      type="button"
+                      onClick={() => setSubmitSuccess(false)}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      Send Another Message
+                    </Button>
+                  </div>
+                ) : (
+                  <form onSubmit={handleSubmit}>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                      <div>
+                        <label htmlFor="name" className="block mb-2 font-medium">
+                          Your Name*
+                        </label>
+                        <input
+                          type="text"
+                          id="name"
+                          name="name"
+                          value={formData.name}
+                          onChange={handleChange}
+                          className="w-full p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-tommyfx-blue"
+                          required
+                        />
+                      </div>
+                      
+                      <div>
+                        <label htmlFor="email" className="block mb-2 font-medium">
+                          Email Address*
+                        </label>
+                        <input
+                          type="email"
+                          id="email"
+                          name="email"
+                          value={formData.email}
+                          onChange={handleChange}
+                          className="w-full p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-tommyfx-blue"
+                          required
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="mb-6">
+                      <label htmlFor="subject" className="block mb-2 font-medium">
+                        Subject
                       </label>
                       <input
                         type="text"
-                        id="name"
+                        id="subject"
+                        name="subject"
+                        value={formData.subject}
+                        onChange={handleChange}
                         className="w-full p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-tommyfx-blue"
-                        required
                       />
                     </div>
                     
-                    <div>
-                      <label htmlFor="email" className="block mb-2 font-medium">
-                        Email Address*
+                    <div className="mb-6">
+                      <label htmlFor="message" className="block mb-2 font-medium">
+                        Your Message*
                       </label>
-                      <input
-                        type="email"
-                        id="email"
+                      <textarea
+                        id="message"
+                        name="message"
+                        rows={6}
+                        value={formData.message}
+                        onChange={handleChange}
                         className="w-full p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-tommyfx-blue"
                         required
-                      />
+                      ></textarea>
                     </div>
-                  </div>
-                  
-                  <div className="mb-6">
-                    <label htmlFor="subject" className="block mb-2 font-medium">
-                      Subject
-                    </label>
-                    <input
-                      type="text"
-                      id="subject"
-                      className="w-full p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-tommyfx-blue"
-                    />
-                  </div>
-                  
-                  <div className="mb-6">
-                    <label htmlFor="message" className="block mb-2 font-medium">
-                      Your Message*
-                    </label>
-                    <textarea
-                      id="message"
-                      rows={6}
-                      className="w-full p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-tommyfx-blue"
-                      required
-                    ></textarea>
-                  </div>
-                  
-                  <Button type="submit" className="btn-primary flex items-center">
-                    <Send size={18} className="mr-2" />
-                    Send Message
-                  </Button>
-                </form>
+                    
+                    <Button 
+                      type="submit" 
+                      className="btn-primary flex items-center"
+                      disabled={isSubmitting}
+                    >
+                      <Send size={18} className="mr-2" />
+                      {isSubmitting ? 'Sending...' : 'Send Message'}
+                    </Button>
+                  </form>
+                )}
               </div>
             </div>
           </div>
@@ -189,11 +308,33 @@ const Contact = () => {
       <section className="py-16 bg-gray-50">
         <div className="container-custom">
           <h2 className="text-2xl font-bold mb-6 text-center">Find Us</h2>
-          <div className="aspect-video bg-gray-200 rounded-lg overflow-hidden">
-            {/* Replace with actual map implementation */}
-            <div className="w-full h-full flex items-center justify-center text-gray-500">
-              <p>Map will be displayed here (Replace with Google Maps or other map service)</p>
-            </div>
+          
+          {/* Google Maps Embed */}
+          <div className="aspect-video bg-white rounded-lg overflow-hidden shadow-md">
+            <iframe 
+              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d217897.59474300013!2d74.17057895!3d31.482940450000003!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x39190483e58107d9%3A0xc23abe6ccc7e2462!2sLahore%2C%20Punjab%2C%20Pakistan!5e0!3m2!1sen!2sus!4v1716230018303!5m2!1sen!2sus" 
+              width="100%" 
+              height="100%" 
+              style={{ border: 0 }} 
+              allowFullScreen={true} 
+              loading="lazy" 
+              referrerPolicy="no-referrer-when-downgrade"
+              title="TommyFX Location in Lahore"
+              className="rounded-lg"
+            ></iframe>
+          </div>
+          
+          <div className="mt-6 text-center text-gray-600">
+            <p>We're located in Lahore, Punjab, Pakistan. Visit us today!</p>
+            <a 
+              href="https://www.google.com/maps/place/Lahore,+Punjab,+Pakistan" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="inline-flex items-center text-tommyfx-blue hover:underline mt-2"
+            >
+              <MapPin size={16} className="mr-1" />
+              Get directions on Google Maps
+            </a>
           </div>
         </div>
       </section>

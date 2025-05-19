@@ -1,9 +1,9 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Heart } from 'lucide-react';
-import { toast } from '@/components/ui/use-toast';
 import { useCart } from '@/hooks/useCart';
+import { Badge } from '@/components/ui/badge';
+import { toast } from '@/components/ui/use-toast';
+import { formatCurrency } from '@/lib/utils'; // Import the utility function
 
 interface ProductCardProps {
   id: string;
@@ -15,22 +15,18 @@ interface ProductCardProps {
   discountPercent?: number;
 }
 
-const ProductCard: React.FC<ProductCardProps> = ({ 
-  id, 
-  name, 
-  price, 
-  image, 
-  category, 
+const ProductCard: React.FC<ProductCardProps> = ({
+  id,
+  name,
+  price,
+  image,
+  category,
   originalPrice,
-  discountPercent 
+  discountPercent
 }) => {
-  const hasDiscount = originalPrice && discountPercent && originalPrice > price;
   const { addToCart } = useCart();
 
-  const handleAddToCart = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
+  const handleAddToCart = () => {
     addToCart({
       id,
       name,
@@ -39,69 +35,75 @@ const ProductCard: React.FC<ProductCardProps> = ({
       quantity: 1
     });
     
+    // Show success toast when item is added to cart
     toast({
       title: "Added to cart",
-      description: `${name} has been added to your cart`,
+      description: `${name} has been added to your cart.`,
+      variant: "default",
+      duration: 3000,
     });
   };
 
-  return (
-    <div className="group relative card-shadow rounded-md overflow-hidden bg-white animate-zoom-in">
-      {/* Product Image with Hover Effect */}
-      <Link to={`/product/${id}`} className="block overflow-hidden">
-        <div className="relative aspect-square overflow-hidden">
-          <img 
-            src={image} 
-            alt={name} 
-            className="h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
-          />
-          <button className="absolute top-4 right-4 bg-white p-2 rounded-full opacity-75 hover:opacity-100 transition-opacity">
-            <Heart size={18} className="text-tommyfx-black" />
-          </button>
-          
-          {category && (
-            <span className="absolute top-4 left-4 bg-tommyfx-blue px-2 py-1 text-xs text-white rounded">
-              {category}
-            </span>
-          )}
+  // Calculate discount percentage if not provided
+  const hasDiscount = originalPrice && originalPrice > price;
+  const calculatedDiscountPercent = hasDiscount && !discountPercent
+    ? Math.round(((originalPrice - price) / originalPrice) * 100)
+    : discountPercent;
 
-          {hasDiscount && (
-            <span className="absolute bottom-4 left-4 bg-red-500 px-2 py-1 text-xs text-white rounded-full">
-              {Math.round(discountPercent)}% OFF
-            </span>
-          )}
-        </div>
-      </Link>
-      
-      {/* Product Info */}
-      <div className="p-4">
+  return (
+    <div className="bg-white rounded-lg shadow-sm overflow-hidden transition-shadow hover:shadow-md">
+      {/* Product Image with Discount Badge */}
+      <div className="relative">
         <Link to={`/product/${id}`}>
-          <h3 className="text-md font-medium mb-2 line-clamp-2 group-hover:text-tommyfx-blue transition-colors">
-            {name}
-          </h3>
+          <div className="aspect-square overflow-hidden">
+            <img 
+              src={image} 
+              alt={name} 
+              className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+              onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
+                e.currentTarget.src = 'https://source.unsplash.com/oG8PIWBc3nE';
+              }}
+            />
+          </div>
         </Link>
         
-        <div className="flex items-center">
-          <p className="text-lg font-medium">${price.toFixed(2)}</p>
-          {hasDiscount && (
-            <p className="ml-2 text-sm text-gray-500 line-through">${originalPrice.toFixed(2)}</p>
-          )}
-        </div>
+        {hasDiscount && calculatedDiscountPercent && (
+          <Badge className="absolute top-2 left-2 bg-red-500 text-white">
+            -{calculatedDiscountPercent}%
+          </Badge>
+        )}
+
+        {category && (
+          <div className="absolute bottom-2 left-2">
+            <Badge variant="outline" className="bg-white bg-opacity-80">
+              {category}
+            </Badge>
+          </div>
+        )}
+      </div>
+      
+      {/* Product Information */}
+      <div className="p-4">
+        <Link to={`/product/${id}`}>
+          <h3 className="font-medium text-gray-800 hover:text-tommyfx-blue mb-2 line-clamp-2">{name}</h3>
+        </Link>
         
-        {/* Quick Shop Button that appears on hover */}
-        <div className="mt-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex space-x-2">
-          <Link 
-            to={`/product/${id}`}
-            className="btn-primary flex-1 block text-center"
-          >
-            Quick Shop
-          </Link>
-          <button
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex flex-col">
+            <span className="font-bold text-gray-900">{formatCurrency(price)}</span>
+            {hasDiscount && (
+              <span className="text-sm text-gray-500 line-through">
+                {formatCurrency(originalPrice || 0)}
+              </span>
+            )}
+          </div>
+          
+          {/* <button 
             onClick={handleAddToCart}
-            className="btn-secondary flex-1 block text-center"
+            className="bg-tommyfx-blue text-white text-sm py-1 px-3 rounded-full hover:bg-blue-600 transition-colors"
           >
             Add to Cart
-          </button>
+          </button> */}
         </div>
       </div>
     </div>

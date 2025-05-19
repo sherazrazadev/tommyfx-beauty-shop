@@ -28,13 +28,13 @@ const About = () => {
             <div>
               <h2 className="text-3xl font-bold mb-6">Our Story</h2>
               <p className="text-gray-700 mb-4">
-                TommyFX was founded in 2020 by beauty enthusiast and skincare specialist Thomas Fox. 
+                TommyFX was founded in 2025 by beauty enthusiast Sheraz Raza and Aamir Ali. 
                 What started as a passion for creating natural, effective skincare solutions for friends and 
                 family quickly blossomed into a full-fledged beauty brand.
               </p>
               <p className="text-gray-700 mb-4">
                 Our journey began with a simple mission: to create premium beauty products that enhance 
-                your natural beauty without harmful chemicals or animal testing. We believe everyone 
+                your natural beauty without animal testing. We believe everyone 
                 deserves to feel confident in their skin, which is why we formulate products that celebrate 
                 your unique beauty.
               </p>
@@ -112,7 +112,7 @@ const About = () => {
       </section>
 
       {/* Team Section */}
-      <section className="py-16">
+      {/* <section className="py-16">
         <div className="container-custom">
           <h2 className="text-3xl font-bold mb-12 text-center">Meet Our Team</h2>
           
@@ -132,7 +132,7 @@ const About = () => {
               </p>
             </div>
             
-            {/* <div className="text-center">
+            <div className="text-center">
               <div className="rounded-lg overflow-hidden mb-4">
                 <img 
                   src="https://source.unsplash.com/rDEOVtE7vOs" 
@@ -145,8 +145,8 @@ const About = () => {
               <p className="text-gray-700">
                 Cosmetic chemist with a passion for creating innovative, effective formulations.
               </p>
-            </div> */}
-{/*             
+            </div>
+
             <div className="text-center">
               <div className="rounded-lg overflow-hidden mb-4">
                 <img 
@@ -160,29 +160,29 @@ const About = () => {
               <p className="text-gray-700">
                 Visionary designer driving TommyFX's distinctive aesthetic and brand identity.
               </p>
-            </div> */}
+            </div>
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* CTA Section */}
-      <section className="py-16 bg-tommyfx-black text-white text-center">
-        <div className="container-custom max-w-3xl">
-          <h2 className="text-3xl font-bold mb-4">Join the TommyFX Family</h2>
-          <p className="mb-8 text-gray-300">
-            Experience the difference of beauty products crafted with care, quality, and 
-            the perfect blend of science and nature.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button asChild size="lg" className="bg-tommyfx-blue hover:bg-blue-600">
-              <Link to="/categories">Shop Our Collection</Link>
-            </Button>
-            <Button asChild size="lg" variant="outline" className="border-white text-white hover:bg-white/10">
-              <Link to="/contact">Contact Us</Link>
-            </Button>
-          </div>
-        </div>
-      </section>
+      {/* // <section className="py-16 bg-tommyfx-black text-white text-center">
+      //   <div className="container-custom max-w-3xl">
+      //     <h2 className="text-3xl font-bold mb-4">Join the TommyFX Family</h2>
+      //     <p className="mb-8 text-gray-300">
+      //       Experience the difference of beauty products crafted with care, quality, and 
+      //       the perfect blend of science and nature.
+      //     </p>
+      //     <div className="flex flex-col sm:flex-row gap-4 justify-center">
+      //       <Button asChild size="lg" className="bg-tommyfx-blue hover:bg-blue-600">
+      //         <Link to="/categories">Shop Our Collection</Link>
+      //       </Button>
+      //       <Button asChild size="lg" variant="outline" className="border-white text-white hover:bg-white/10">
+      //         <Link to="/contact">Contact Us</Link>
+      //       </Button>
+      //     </div>
+      //   </div>
+      // </section> */}
     </div>
   );
 };

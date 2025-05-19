@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useWishlist } from '@/components/wishlist/useWishlist';
 import { useCart } from '@/hooks/useCart';
-
+import { formatCurrency } from '@/lib/utils';
 const WishlistPage = () => {
   const { wishlist, removeFromWishlist, clearWishlist } = useWishlist();
   const { addToCart } = useCart();
@@ -88,7 +88,7 @@ const WishlistPage = () => {
                 <Link to={`/product/${item.id}`}>
                   <h3 className="font-medium text-lg hover:text-tommyfx-blue mb-1">{item.name}</h3>
                 </Link>
-                <p className="text-lg font-bold mb-3">${item.price.toFixed(2)}</p>
+                  <p className="text-lg font-bold mb-3">{formatCurrency(item.price)}</p>
                 
                 <Button 
                   className="w-full flex items-center justify-center gap-2"

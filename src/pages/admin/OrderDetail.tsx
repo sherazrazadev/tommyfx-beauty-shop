@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { formatCurrency } from '@/lib/utils'; // Add this import at the top
 
 type OrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
 
@@ -282,7 +283,8 @@ const OrderDetail = () => {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Total Amount:</span>
-                  <span className="font-medium">${order.total_amount.toFixed(2)}</span>
+                  <span className="font-medium">{formatCurrency(order.total_amount)}</span>
+
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-500">Status:</span>
@@ -386,8 +388,9 @@ const OrderDetail = () => {
                     <TableRow key={item.id}>
                       <TableCell>{item.product_name}</TableCell>
                       <TableCell className="text-right">{item.quantity}</TableCell>
-                      <TableCell className="text-right">${item.price.toFixed(2)}</TableCell>
-                      <TableCell className="text-right">${(item.price * item.quantity).toFixed(2)}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(item.price)}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(item.price * item.quantity)}</TableCell>
+
                     </TableRow>
                   ))
                 ) : (
@@ -399,7 +402,7 @@ const OrderDetail = () => {
                 )}
                 <TableRow className="bg-gray-50">
                   <TableCell colSpan={3} className="text-right font-medium">Total</TableCell>
-                  <TableCell className="text-right font-bold">${order.total_amount.toFixed(2)}</TableCell>
+                  <TableCell className="text-right font-bold">{formatCurrency(order.total_amount)}</TableCell>
                 </TableRow>
               </TableBody>
             </Table>

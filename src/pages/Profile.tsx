@@ -481,7 +481,7 @@ const Profile = () => {
             </div>
             
             {/* User's Submitted Feedback */}
-            {submittedFeedback.length > 0 && (
+            {/* {submittedFeedback.length > 0 && (
               <div className="bg-white rounded-lg shadow-sm p-6">
                 <h3 className="text-xl font-bold mb-6">Your Submitted Feedback</h3>
                 
@@ -508,7 +508,7 @@ const Profile = () => {
                   ))}
                 </div>
               </div>
-            )}
+            )} */}
           </div>
         </div>
       </div>

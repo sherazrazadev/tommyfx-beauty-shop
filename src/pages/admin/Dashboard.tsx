@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/useAuth';
 import AdminLayout from '@/components/layout/AdminLayout';
 import { toast } from '@/components/ui/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
+import { formatCurrency } from '@/lib/utils'; // Add this import at the top
 
 // Types
 interface StatsType {
@@ -193,7 +194,7 @@ const Dashboard: React.FC = () => {
                   </div>
                   <div>
                     <p className="text-sm text-gray-500">Total Revenue</p>
-                    <h3 className="text-2xl font-bold">${stats.totalRevenue.toFixed(2)}</h3>
+                    <h3 className="text-2xl font-bold">{formatCurrency(stats.totalRevenue)}</h3>
                   </div>
                 </div>
               </div>
@@ -279,7 +280,8 @@ const Dashboard: React.FC = () => {
                           <p className="text-sm text-gray-500">Order #{order.id.slice(0, 8)}</p>
                         </div>
                         <div className="text-right">
-                          <p className="font-medium">${parseFloat(order.total_amount).toFixed(2)}</p>
+                          <p className="font-medium">{formatCurrency(parseFloat(order.total_amount))}</p>
+
                           <p className="text-sm text-gray-500">
                             {new Date(order.created_at).toLocaleDateString()}
                           </p>

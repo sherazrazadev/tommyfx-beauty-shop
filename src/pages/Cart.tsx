@@ -4,6 +4,7 @@ import { Trash2, Minus, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/hooks/useCart';
 import { Separator } from '@/components/ui/separator';
+import { formatCurrency } from '@/lib/utils';
 
 const Cart = () => {
   const { cart, removeFromCart, updateQuantity, getCartTotal } = useCart();
@@ -58,7 +59,7 @@ const Cart = () => {
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-4">${item.price.toFixed(2)}</td>
+                        <td className="px-6 py-4">{formatCurrency(item.price)}</td>
                         <td className="px-6 py-4">
                           <div className="flex items-center">
                             <button
@@ -77,7 +78,8 @@ const Cart = () => {
                             </button>
                           </div>
                         </td>
-                        <td className="px-6 py-4 font-medium">${(item.price * item.quantity).toFixed(2)}</td>
+                        <td className="px-6 py-4 font-medium">{formatCurrency(item.price * item.quantity)}</td>
+
                         <td className="px-6 py-4">
                           <button
                             onClick={() => removeFromCart(item.id)}
@@ -105,7 +107,7 @@ const Cart = () => {
             <div className="space-y-3 mb-6">
               <div className="flex justify-between text-gray-600">
                 <span>Subtotal</span>
-                <span>${getCartTotal().toFixed(2)}</span>
+                <span>{formatCurrency(getCartTotal())}</span>
               </div>
               <div className="flex justify-between text-gray-600">
                 <span>Shipping</span>
@@ -114,7 +116,8 @@ const Cart = () => {
               <Separator />
               <div className="flex justify-between font-bold text-lg">
                 <span>Total</span>
-                <span>${getCartTotal().toFixed(2)}</span>
+                <span>{formatCurrency(getCartTotal())}</span>
+
               </div>
             </div>
             <Link to="/checkout">
