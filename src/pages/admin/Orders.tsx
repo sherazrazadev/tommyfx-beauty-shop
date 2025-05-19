@@ -7,6 +7,8 @@ import { toast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { formatCurrency } from '@/lib/utils';
+
 import { 
   DropdownMenu,
   DropdownMenuTrigger,
@@ -258,10 +260,9 @@ const OrdersPage = () => {
   };
 
   // Format currency
-  const formatCurrency = (amount: number) => {
-    return '$' + amount.toFixed(2);
-  };
-
+  // const formatCurrency = (amount: number) => {
+  //   return '$' + amount.toFixed(2);
+  // };
   const handleViewOrder = (orderId: string) => {
     navigate(`/admin/orders/${orderId}`);
   };

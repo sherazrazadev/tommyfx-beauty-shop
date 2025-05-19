@@ -112,7 +112,7 @@ const Categories = () => {
 // Helper function to get appropriate image for each category
 function getCategoryImage(category: string): string {
   const imageMap: Record<string, string> = {
-    Skincare: 'https://source.unsplash.com/vltMzn0jqsA',
+    Serum: 'https://source.unsplash.com/vltMzn0jqsA',
     Makeup: 'https://source.unsplash.com/UKWFNya-YHk',
     Hair: 'https://source.unsplash.com/eeAZHchRdgA',
     Body: 'https://source.unsplash.com/MhOcP0qEZLw',
@@ -126,7 +126,7 @@ function getCategoryImage(category: string): string {
 // Helper function to get category descriptions
 function getCategoryDescription(category: string): string {
   const descriptionMap: Record<string, string> = {
-    Skincare: 'Premium skincare products to nourish and revitalize your skin for a radiant complexion.',
+    Serums: 'Premium Skincare products to nourish and revitalize your skin for a radiant complexion.',
     Makeup: 'High-quality makeup products to enhance your natural beauty and express your unique style.',
     Hair: 'Professional hair care products for healthy, shiny, and manageable hair every day.',
     Body: 'Luxury body care products to pamper your skin and indulge your senses.',

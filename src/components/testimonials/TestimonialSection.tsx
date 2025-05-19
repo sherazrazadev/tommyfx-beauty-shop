@@ -1,10 +1,9 @@
-
 import React, { useEffect, useState, useRef } from 'react';
 import TestimonialCard from '../ui/TestimonialCard';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 
 export type Testimonial = {
   id: string;
@@ -51,6 +50,8 @@ const TestimonialSection = () => {
     try {
       console.log("Fetching approved testimonials...");
       setLoading(true);
+      
+      // Make sure to explicitly filter for approved=true
       const { data, error } = await supabase
         .from('feedback')
         .select(`
@@ -71,7 +72,14 @@ const TestimonialSection = () => {
         throw error;
       }
       
-      console.log("Feedback entries fetched:", data?.length || 0);
+      console.log("Feedback entries fetched:", data?.length || 0, data);
+      
+      // If no testimonials are returned, log this for debugging
+      if (!data || data.length === 0) {
+        console.log("No approved testimonials found");
+        setTestimonials([]);
+        return;
+      }
       
       // Map the data to the Testimonial type
       let mappedTestimonials: Testimonial[] = (data || []).map(item => ({
@@ -86,8 +94,8 @@ const TestimonialSection = () => {
 
       // If we have user IDs, fetch their profiles
       const userIds = data
-        ?.map(item => item.user_id)
-        .filter((id): id is string => id != null);
+        ?.filter(item => item.user_id != null)
+        .map(item => item.user_id) as string[];
 
       if (userIds && userIds.length > 0) {
         console.log("Fetching user profiles for testimonials...");
@@ -123,6 +131,11 @@ const TestimonialSection = () => {
       setTestimonials(mappedTestimonials);
     } catch (error) {
       console.error('Error fetching testimonials:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load testimonials",
+        variant: "destructive"
+      });
       setTestimonials([]);
     } finally {
       setLoading(false);
@@ -130,7 +143,33 @@ const TestimonialSection = () => {
   };
 
   useEffect(() => {
+    console.log("Setting up realtime subscription for feedback table");
+    
+    const channel = supabase
+      .channel('public:feedback')
+      .on('postgres_changes', 
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'feedback',
+          filter: 'approved=eq.true'
+        }, 
+        (payload) => {
+          console.log('Realtime feedback update received:', payload);
+          fetchApprovedFeedback();
+        }
+      )
+      .subscribe((status) => {
+        console.log("Supabase channel status:", status);
+      });
+
+    // Fetch the initial data
     fetchApprovedFeedback();
+
+    return () => {
+      console.log("Cleaning up realtime subscription");
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   // Scroll left and right handlers
@@ -198,7 +237,8 @@ const TestimonialSection = () => {
                     name={testimonial.author}
                     rating={testimonial.rating}
                     comment={testimonial.content}
-                    date={testimonial.date || testimonial.role}
+                    date={testimonial.date}
+                    product={testimonial.product_name}
                   />
                 </div>
               ))}

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { 
@@ -11,12 +10,13 @@ import {
   ShoppingCart,
   Truck,
   RefreshCw,
-  Check
+  Check,
+  X,
+  Info
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ProductCard from '@/components/ui/ProductCard';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useCart } from '@/hooks/useCart';
 import { useAuth } from '@/hooks/useAuth';
@@ -33,6 +33,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { formatCurrency } from '@/lib/utils'; // Add this import at the top
 
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -46,6 +47,25 @@ const ProductDetail = () => {
   const { addToCart } = useCart();
   const { user } = useAuth();
   const { addToWishlist, isInWishlist, removeFromWishlist } = useWishlist();
+  const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
+  const [loadingRelated, setLoadingRelated] = useState(true);
+  
+  // Popup notification state
+  const [showPopup, setShowPopup] = useState(false);
+  const [popupMessage, setPopupMessage] = useState('');
+  const [popupType, setPopupType] = useState<'success' | 'error' | 'info'>('success');
+
+  // Function to show notification popup
+  const showNotification = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    setPopupMessage(message);
+    setPopupType(type);
+    setShowPopup(true);
+    
+    // Auto-hide the popup after 3 seconds
+    setTimeout(() => {
+      setShowPopup(false);
+    }, 3000);
+  };
   
   useEffect(() => {
     const fetchProduct = async () => {
@@ -93,6 +113,11 @@ const ProductDetail = () => {
           
           // Fetch reviews for this product
           await fetchReviews(id);
+
+          // Fetch related products based on category
+          if (data.category) {
+            await fetchRelatedProducts(data.category, data.id);
+          }
         } else {
           console.log("No product found with ID:", id);
         }
@@ -167,6 +192,41 @@ const ProductDetail = () => {
     }
   };
 
+  // Fetch related products based on category
+  const fetchRelatedProducts = async (category: string, currentProductId: string) => {
+    setLoadingRelated(true);
+    try {
+      // Get products with the same category, excluding the current product
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('category', category)
+        .neq('id', currentProductId)
+        .limit(4);
+        
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        setRelatedProducts(data);
+      } else {
+        // If no related products in the same category, get any 4 products
+        const { data: otherProducts, error: otherError } = await supabase
+          .from('products')
+          .select('*')
+          .neq('id', currentProductId)
+          .limit(4);
+          
+        if (otherError) throw otherError;
+        
+        setRelatedProducts(otherProducts || []);
+      }
+    } catch (error) {
+      console.error('Error fetching related products:', error);
+    } finally {
+      setLoadingRelated(false);
+    }
+  };
+
   const incrementQuantity = () => setQuantity(prev => prev + 1);
   const decrementQuantity = () => setQuantity(prev => (prev > 1 ? prev - 1 : 1));
 
@@ -179,20 +239,15 @@ const ProductDetail = () => {
         image: product.image_url,
         quantity
       });
-      toast({
-        title: "Added to cart",
-        description: `${quantity} x ${product.name} added to your cart`,
-      });
+      
+      // Show popup notification
+      showNotification(`${quantity} x ${product.name} added to your cart`);
     }
   };
   
   const handleOpenReviewDialog = () => {
     if (!user) {
-      toast({
-        title: "Please log in",
-        description: "You need to be logged in to write a review.",
-        variant: "destructive"
-      });
+      showNotification("You need to be logged in to write a review.", "error");
       return;
     }
     setReviewDialogOpen(true);
@@ -203,10 +258,7 @@ const ProductDetail = () => {
     
     if (isInWishlist(product.id)) {
       removeFromWishlist(product.id);
-      toast({
-        title: "Removed from wishlist",
-        description: `${product.name} has been removed from your wishlist`,
-      });
+      showNotification(`${product.name} has been removed from your wishlist`);
     } else {
       addToWishlist({
         id: product.id,
@@ -214,20 +266,14 @@ const ProductDetail = () => {
         price: product.discount_price ? product.discount_price : product.price,
         image: product.image_url || product.images[0]
       });
-      toast({
-        title: "Added to wishlist",
-        description: `${product.name} has been added to your wishlist`,
-      });
+      showNotification(`${product.name} has been added to your wishlist`);
     }
   };
 
   const handleReviewSubmitted = async () => {
     // After a review is submitted, fetch the reviews again
     if (id) {
-      toast({
-        title: "Review submitted",
-        description: "Your review will appear after approval by an administrator.",
-      });
+      showNotification("Review submitted. Your review will appear after approval by an administrator.");
       await fetchReviews(id);
       setReviewDialogOpen(false);
     }
@@ -354,11 +400,11 @@ const ProductDetail = () => {
               
               {product.discount_percent ? (
                 <div className="mb-6">
-                  <p className="text-2xl font-bold text-tommyfx-blue">${product.price.toFixed(2)}</p>
-                  <p className="text-gray-500 line-through">${product.original_price.toFixed(2)}</p>
+                  <p className="text-2xl font-bold text-tommyfx-blue">{formatCurrency(product.price)}</p>
+                  <p className="text-gray-500 line-through">{formatCurrency(product.original_price)}</p>
                 </div>
               ) : (
-                <p className="text-2xl font-bold mb-6">${product.price.toFixed(2)}</p>
+                <p className="text-2xl font-bold mb-6">{formatCurrency(product.price)}</p>
               )}
               
               <p className="text-gray-700 mb-6">{product.description}</p>
@@ -522,19 +568,32 @@ const ProductDetail = () => {
         <div className="container-custom">
           <h2 className="text-2xl font-bold mb-6">You May Also Like</h2>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {/* Related products would go here - using mock data for now */}
-            {Array(4).fill(null).map((_, idx) => (
-              <ProductCard
-                key={idx}
-                id={`related-${idx}`}
-                name={`Related Product ${idx + 1}`}
-                price={29.99}
-                image={`https://source.unsplash.com/random/300x300?beauty&sig=${idx}`}
-                category="Related"
-              />
-            ))}
-          </div>
+          {loadingRelated ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {Array(4).fill(null).map((_, idx) => (
+                <div key={idx} className="bg-gray-100 rounded-lg animate-pulse h-64"></div>
+              ))}
+            </div>
+          ) : relatedProducts.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {relatedProducts.map(product => (
+                <ProductCard
+                  key={product.id}
+                  id={product.id}
+                  name={product.name}
+                  price={parseFloat(product.price)}
+                  image={product.image_url || 'https://source.unsplash.com/oG8PIWBc3nE'}
+                  category={product.category}
+                  originalPrice={product.original_price ? parseFloat(product.original_price) : undefined}
+                  discountPercent={product.discount_percent ? parseFloat(product.discount_percent) : undefined}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-gray-500">No related products found.</p>
+            </div>
+          )}
         </div>
       </section>
       
@@ -569,6 +628,41 @@ const ProductDetail = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Custom Popup Notification */}
+      {/* Custom Popup Notification */}
+      {showPopup && (
+        <div className="fixed top-4 right-4 z-50 w-72 overflow-hidden rounded-md bg-white shadow-lg border border-gray-200 animate-in slide-in-from-top-3">
+          <div className={`px-4 py-3 ${
+            popupType === 'success' ? 'bg-green-50 border-l-4 border-l-green-500' : 
+            popupType === 'error' ? 'bg-red-50 border-l-4 border-l-red-500' : 'bg-blue-50 border-l-4 border-l-blue-500'
+          }`}>
+            <div className="flex items-center">
+              <div className="flex-shrink-0 mr-2">
+                {popupType === 'success' ? (
+                  <Check className="h-5 w-5 text-green-500" />
+                ) : popupType === 'error' ? (
+                  <X className="h-5 w-5 text-red-500" />
+                ) : (
+                  <Info className="h-5 w-5 text-blue-500" />
+                )}
+              </div>
+              <div className="flex-grow">
+                <p className="text-sm font-medium">
+                  {popupMessage}
+                </p>
+              </div>
+              <button
+                type="button"
+                className="ml-3 flex-shrink-0 text-gray-400 hover:text-gray-500"
+                onClick={() => setShowPopup(false)}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

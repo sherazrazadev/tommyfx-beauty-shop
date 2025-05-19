@@ -14,7 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 // Define categories for the dropdown
 const categories = [
-  'Skincare', 
+  'Serums', 
   'Makeup', 
   'Hair', 
   'Body', 
@@ -63,6 +63,7 @@ const ProductForm = () => {
       setPrice(originalPrice);
     }
   }, [originalPrice, discount]);
+
 
   useEffect(() => {
     // Fetch product data if in edit mode

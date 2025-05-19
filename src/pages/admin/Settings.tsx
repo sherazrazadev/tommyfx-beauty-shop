@@ -24,7 +24,7 @@ const Settings = () => {
   const [storeAddress, setStoreAddress] = useState('123 Beauty Ave, New York, NY 10001');
   const [storeLogo, setStoreLogo] = useState('');
   const [storeDescription, setStoreDescription] = useState('Premium beauty products for every skin type.');
-  const [defaultCurrency, setDefaultCurrency] = useState('USD');
+  const [defaultCurrency, setDefaultCurrency] = useState('PKR');
   
   // Email settings
   const [orderConfirmationTemplate, setOrderConfirmationTemplate] = useState('');
@@ -162,6 +162,8 @@ const Settings = () => {
                           <SelectValue placeholder="Select Currency" />
                         </SelectTrigger>
                         <SelectContent>
+                          <SelectItem value="PKR">PKR - PAK Rupee</SelectItem>
+
                           <SelectItem value="USD">USD - US Dollar</SelectItem>
                           <SelectItem value="EUR">EUR - Euro</SelectItem>
                           <SelectItem value="GBP">GBP - British Pound</SelectItem>

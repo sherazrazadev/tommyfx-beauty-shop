@@ -36,13 +36,13 @@ const Footer = () => {
               Where skincare meets perfection! Start with our powerful serums and get ready for the glow-up of a lifetime!
             </p>
             <div className="flex space-x-4">
-              <a href="#" className="text-gray-300 hover:text-tommyfx-blue">
+              <a href="https://www.instagram.com/tommyfx.pk" target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-tommyfx-blue">
                 <Instagram size={20} />
               </a>
-              <a href="#" className="text-gray-300 hover:text-tommyfx-blue">
+              <a href="https://www.facebook.com/profile.php?id=61575684157555" target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-tommyfx-blue">
                 <Facebook size={20} />
               </a>
-              <a href="#" className="text-gray-300 hover:text-tommyfx-blue">
+              <a href="https://www.tiktok.com/@tommyfx.pk" target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-tommyfx-blue">
                 <Twitter size={20} />
               </a>
             </div>

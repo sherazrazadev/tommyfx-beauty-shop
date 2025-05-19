@@ -17,6 +17,7 @@ import AdminLayout from '@/components/layout/AdminLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/use-toast';
+import { formatCurrency } from '@/lib/utils';
 
 type ProductType = {
   id: string;
@@ -284,7 +285,7 @@ const Products = () => {
                       <h3 className="font-medium mb-1">{product.name}</h3>
                       <p className="text-sm text-gray-500 mb-2">{product.category}</p>
                       <div className="flex justify-between mb-3">
-                        <span className="font-medium">${product.price.toFixed(2)}</span>
+                        <span className="font-medium">{formatCurrency(product.price)}</span>
                         <span className="text-sm text-gray-500">Stock: {product.stock}</span>
                       </div>
                       
@@ -366,7 +367,8 @@ const Products = () => {
                         </td>
                         <td className="p-3 font-medium">{product.name}</td>
                         <td className="p-3">{product.category}</td>
-                        <td className="p-3">${product.price.toFixed(2)}</td>
+                        <td className="p-3">{formatCurrency(product.price)}</td>
+
                         <td className="p-3">{product.stock}</td>
                         <td className="p-3">
                           <span className={`inline-block px-2 py-1 rounded-full text-xs ${
