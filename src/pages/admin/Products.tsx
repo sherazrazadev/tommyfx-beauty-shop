@@ -18,6 +18,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/use-toast';
 import { formatCurrency } from '@/lib/utils';
+
 type ProductType = {
   id: string;
   name: string;

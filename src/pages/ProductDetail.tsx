@@ -42,13 +42,31 @@ const ProductDetail = () => {
   const [product, setProduct] = useState<any>(null);
   const [reviews, setReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const { addToCart } = useCart();
   const { user } = useAuth();
   const { addToWishlist, isInWishlist, removeFromWishlist } = useWishlist();
-  // Add these state variables at the top of your component:
-  const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
+  const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
+  const [loadingRelated, setLoadingRelated] = useState(true);
+  
+  // Popup notification state
+  const [showPopup, setShowPopup] = useState(false);
+  const [popupMessage, setPopupMessage] = useState('');
+  const [popupType, setPopupType] = useState<'success' | 'error' | 'info'>('success');
 
+  // Function to show notification popup
+  const showNotification = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    setPopupMessage(message);
+    setPopupType(type);
+    setShowPopup(true);
+    
+    // Auto-hide the popup after 3 seconds
+    setTimeout(() => {
+      setShowPopup(false);
+    }, 3000);
+  };
+  
   useEffect(() => {
     const fetchProduct = async () => {
       setLoading(true);
@@ -113,26 +131,6 @@ const ProductDetail = () => {
     fetchProduct();
   }, [id]);
   
-
-
-  const incrementQuantity = () => setQuantity(prev => prev + 1);
-  const decrementQuantity = () => setQuantity(prev => (prev > 1 ? prev - 1 : 1));
-
-  const handleAddToCart = () => {
-    if (product) {
-      addToCart({
-        id: product.id,
-        name: product.name,
-        price: product.discount_price ? product.discount_price : product.price,
-        image: product.image_url,
-        quantity
-      });
-      toast({
-        title: "Added to cart",
-        description: `${quantity} x ${product.name} added to your cart`,
-      });
-    }
-  };
   const fetchReviews = async (productId: string) => {
     try {
       // Get approved feedback for this product
@@ -193,6 +191,60 @@ const ProductDetail = () => {
       console.error('Error fetching reviews:', error);
     }
   };
+
+  // Fetch related products based on category
+  const fetchRelatedProducts = async (category: string, currentProductId: string) => {
+    setLoadingRelated(true);
+    try {
+      // Get products with the same category, excluding the current product
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('category', category)
+        .neq('id', currentProductId)
+        .limit(4);
+        
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        setRelatedProducts(data);
+      } else {
+        // If no related products in the same category, get any 4 products
+        const { data: otherProducts, error: otherError } = await supabase
+          .from('products')
+          .select('*')
+          .neq('id', currentProductId)
+          .limit(4);
+          
+        if (otherError) throw otherError;
+        
+        setRelatedProducts(otherProducts || []);
+      }
+    } catch (error) {
+      console.error('Error fetching related products:', error);
+    } finally {
+      setLoadingRelated(false);
+    }
+  };
+
+  const incrementQuantity = () => setQuantity(prev => prev + 1);
+  const decrementQuantity = () => setQuantity(prev => (prev > 1 ? prev - 1 : 1));
+
+  const handleAddToCart = () => {
+    if (product) {
+      addToCart({
+        id: product.id,
+        name: product.name,
+        price: product.discount_price ? product.discount_price : product.price,
+        image: product.image_url,
+        quantity
+      });
+      
+      // Show popup notification
+      showNotification(`${quantity} x ${product.name} added to your cart`);
+    }
+  };
+  
   const handleOpenReviewDialog = () => {
     if (!user) {
       showNotification("You need to be logged in to write a review.", "error");
@@ -323,23 +375,13 @@ const ProductDetail = () => {
                 ))}
               </div>
             </div>
-            {/* Review Dialog */}
-            {product && (
-              <ReviewDialog 
-                isOpen={reviewDialogOpen}
-                onClose={() => setReviewDialogOpen(false)}
-                productId={id || ''}
-                productName={product?.name || 'Product'}
-                onReviewSubmitted={handleReviewSubmitted}
-              />
-            )}
+
             {/* Product Info */}
             <div>
               <span className="text-tommyfx-blue uppercase text-sm font-medium tracking-wide">
                 {product.category || 'Product'}
               </span>
-              <h1 className="text-3xl font-bold mt-2 mb-4">{product?.name || 'Product'}</h1>
-
+              <h1 className="text-3xl font-bold mt-2 mb-4">{product.name}</h1>
               
               <div className="flex items-center mb-4">
                 <div className="flex">
@@ -364,7 +406,6 @@ const ProductDetail = () => {
               ) : (
                 <p className="text-2xl font-bold mb-6">{formatCurrency(product.price)}</p>
               )}
-
               
               <p className="text-gray-700 mb-6">{product.description}</p>
               
@@ -588,6 +629,7 @@ const ProductDetail = () => {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Custom Popup Notification */}
       {/* Custom Popup Notification */}
       {showPopup && (
         <div className="fixed top-4 right-4 z-50 w-72 overflow-hidden rounded-md bg-white shadow-lg border border-gray-200 animate-in slide-in-from-top-3">
