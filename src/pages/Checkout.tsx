@@ -134,7 +134,7 @@ const Checkout = () => {
           cart
         );
       } catch (emailError) {
-        console.error("Failed to send order confirmation email:", emailError);
+        console.error("order confirmation email:", emailError);
         // Don't stop the checkout process if email fails
       }
 

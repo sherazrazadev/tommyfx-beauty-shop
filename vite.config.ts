@@ -37,7 +37,7 @@ export default defineConfig(({ mode }) => ({
     proxy: {
       // Proxy API requests to a local Express server
       '/api': {
-        target: 'http://localhost:3000',
+        target: 'https://tommyfx-beauty-shop.vercel.app/',
         changeOrigin: true,
       }
     }
