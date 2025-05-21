@@ -5,34 +5,18 @@
  * @param cartItems - Items in the cart
  * @returns Promise with the response
  */
-export const sendOrderConfirmationEmail = async (
-  order: any,
-  customer: any,
-  cartItems: any[]
-) => {
-  try {
-    const response = await fetch('http://localhost:3000/api/send-email', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        order,
-        customer,
-        cartItems
-      }),
-    });
+// emailClient.ts
+export async function sendOrderConfirmationEmail(order, customer, cartItems) {
+  const res = await fetch('/api/email', {      // ← relative path here
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ order, customer, cartItems }),
+  });
 
-    const data = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(data.message || 'Failed to send email');
-    }
-    
-    console.log('Order confirmation email sent successfully');
-    return data;
-  } catch (error) {
-    console.error('Failed to send order confirmation email:', error);
-    throw error;
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Email API error (${res.status}): ${text}`);
   }
-};
+
+  return res.json();
+}
