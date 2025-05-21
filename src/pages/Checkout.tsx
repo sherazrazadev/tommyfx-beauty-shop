@@ -10,7 +10,6 @@ import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Info } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
-// import { sendOrderConfirmationEmail } from '@/integrations/sendgrid/emailUtils';
 import { sendOrderConfirmationEmail } from '@/integrations/sendgrid/emailClient';
 
 const Checkout = () => {
