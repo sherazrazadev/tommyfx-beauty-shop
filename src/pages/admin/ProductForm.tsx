@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ChevronRight, ArrowLeft, Plus, X } from 'lucide-react';
@@ -11,10 +10,12 @@ import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import AdminLayout from '@/components/layout/AdminLayout';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Product } from '@/types/index'; // Import the Product type
 
 // Define categories for the dropdown
 const categories = [
-  'Serums', 
+  'Skincare', 
   'Makeup', 
   'Hair', 
   'Body', 
@@ -38,9 +39,15 @@ const ProductForm = () => {
   const [discount, setDiscount] = useState('');
   const [originalPrice, setOriginalPrice] = useState('');
   
+  // New fields for product details
+  const [ingredients, setIngredients] = useState('');
+  const [howToUse, setHowToUse] = useState('');
+  const [benefits, setBenefits] = useState('');
+  
   // UI state
   const [loading, setLoading] = useState(isEditing);
   const [saving, setSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState('basic');
 
   // Calculate discounted price
   const calculateDiscountedPrice = (original: string, discountPercent: string) => {
@@ -64,7 +71,6 @@ const ProductForm = () => {
     }
   }, [originalPrice, discount]);
 
-
   useEffect(() => {
     // Fetch product data if in edit mode
     if (isEditing) {
@@ -80,27 +86,39 @@ const ProductForm = () => {
           if (error) throw error;
           
           if (data) {
-            setName(data.name);
-            setDescription(data.description || '');
-            setPrice(data.price.toString());
-            setCategory(data.category || '');
-            setImageUrl(data.image_url || '');
+            // Cast data to our Product type
+            const productData = data as Product;
+            
+            setName(productData.name);
+            setDescription(productData.description || '');
+            setPrice(productData.price.toString());
+            setCategory(productData.category || '');
+            setImageUrl(productData.image_url || '');
             
             // Handle additional images if present
-            if (data.additional_images && Array.isArray(data.additional_images)) {
-              setAdditionalImages(data.additional_images);
+            if (productData.additional_images && Array.isArray(productData.additional_images)) {
+              setAdditionalImages(productData.additional_images);
             }
             
-            setStock(data.stock?.toString() || '0');
+            setStock(productData.stock?.toString() || '0');
             
             // Handle discount data if available
-            if (data.original_price) {
-              setOriginalPrice(data.original_price.toString());
-              if (data.discount_percent) {
-                setDiscount(data.discount_percent.toString());
+            if (productData.original_price) {
+              setOriginalPrice(productData.original_price.toString());
+              if (productData.discount_percent) {
+                setDiscount(productData.discount_percent.toString());
               }
             } else {
-              setOriginalPrice(data.price.toString());
+              setOriginalPrice(productData.price.toString());
+            }
+            
+            // Set the new product detail fields if they exist
+            setIngredients(productData.ingredients || '');
+            setHowToUse(productData.how_to_use || '');
+            
+            // Format benefits array to string for textarea (each benefit on a new line)
+            if (productData.benefits && Array.isArray(productData.benefits)) {
+              setBenefits(productData.benefits.join('\n'));
             }
           }
         } catch (error) {
@@ -182,6 +200,9 @@ const ProductForm = () => {
     
     setSaving(true);
     
+    // Convert benefits from string to array if it's not empty
+    const benefitsArray = benefits.trim() ? benefits.split('\n').filter(benefit => benefit.trim()) : [];
+    
     // Prepare product data for database
     const productData = {
       name,
@@ -189,11 +210,15 @@ const ProductForm = () => {
       description,
       category,
       image_url: imageUrl || (additionalImages.length > 0 ? additionalImages[0] : null),
-      additional_images: additionalImages, // Add additional images array to the database
+      additional_images: additionalImages,
       stock: stockValue,
       updated_at: new Date().toISOString(),
       original_price: originalPrice ? parseFloat(originalPrice) : numericPrice,
-      discount_percent: discount ? parseFloat(discount) : null
+      discount_percent: discount ? parseFloat(discount) : null,
+      // Add the new fields
+      ingredients,
+      how_to_use: howToUse,
+      benefits: benefitsArray
     };
     
     try {
@@ -265,180 +290,239 @@ const ProductForm = () => {
             <Skeleton className="h-10 w-48" />
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-sm p-6 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Product Name */}
-              <div className="space-y-2">
-                <Label htmlFor="name">Product Name *</Label>
-                <Input 
-                  id="name" 
-                  value={name} 
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Enter product name"
-                  required
-                />
-              </div>
+          <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-sm p-6">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
+              <TabsList>
+                <TabsTrigger value="basic">Basic Information</TabsTrigger>
+                <TabsTrigger value="details">Product Details</TabsTrigger>
+                <TabsTrigger value="images">Product Images</TabsTrigger>
+              </TabsList>
               
-              {/* Stock */}
-              <div className="space-y-2">
-                <Label htmlFor="stock">Stock Quantity *</Label>
-                <Input 
-                  id="stock" 
-                  type="number" 
-                  min="0"
-                  value={stock} 
-                  onChange={(e) => setStock(e.target.value)}
-                  placeholder="0"
-                  required
-                />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Original Price */}
-              <div className="space-y-2">
-                <Label htmlFor="original_price">Original Price (USD) *</Label>
-                <Input 
-                  id="original_price" 
-                  type="number" 
-                  step="0.01" 
-                  min="0"
-                  value={originalPrice} 
-                  onChange={(e) => setOriginalPrice(e.target.value)}
-                  placeholder="0.00"
-                  required
-                />
-              </div>
-              
-              {/* Discount */}
-              <div className="space-y-2">
-                <Label htmlFor="discount">Discount (%)</Label>
-                <Input 
-                  id="discount" 
-                  type="number" 
-                  step="0.01" 
-                  min="0"
-                  max="99.99"
-                  value={discount} 
-                  onChange={(e) => setDiscount(e.target.value)}
-                  placeholder="0.00"
-                />
-              </div>
-              
-              {/* Final Price */}
-              <div className="space-y-2">
-                <Label htmlFor="price">Final Price (USD) *</Label>
-                <Input 
-                  id="price" 
-                  type="number" 
-                  step="0.01" 
-                  min="0"
-                  value={price} 
-                  onChange={(e) => setPrice(e.target.value)}
-                  placeholder="0.00"
-                  required
-                  disabled={originalPrice && discount ? true : false}
-                />
-                {originalPrice && discount && (
-                  <p className="text-sm text-gray-500">Auto-calculated from discount</p>
-                )}
-              </div>
-            </div>
-            
-            {/* Category */}
-            <div className="space-y-2">
-              <Label htmlFor="category">Category</Label>
-              <Select value={category} onValueChange={setCategory}>
-                <SelectTrigger id="category">
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((cat) => (
-                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            {/* Description */}
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea 
-                id="description" 
-                value={description} 
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Product description"
-                rows={5}
-              />
-            </div>
-            
-            {/* Primary Image URL */}
-            <div className="space-y-2">
-              <Label htmlFor="image_url">Image URL</Label>
-              <div className="flex space-x-2">
-                <Input 
-                  id="image_url" 
-                  value={imageUrl} 
-                  onChange={(e) => setImageUrl(e.target.value)}
-                  placeholder="https://example.com/image.jpg"
-                  className="flex-1"
-                />
-                <Button 
-                  type="button" 
-                  onClick={handleAddImage}
-                  disabled={!imageUrl.trim()}
-                >
-                  <Plus size={16} className="mr-2" /> Add to Gallery
-                </Button>
-              </div>
-              <p className="text-sm text-gray-500">Add multiple images to the product gallery.</p>
-            </div>
-            
-            {/* Image Gallery */}
-            {(additionalImages.length > 0 || imageUrl) && (
-              <div className="space-y-2">
-                <Label className="block mb-2">Image Gallery</Label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                  {imageUrl && (
-                    <div className="relative aspect-square rounded border border-gray-200 overflow-hidden">
-                      <img 
-                        src={imageUrl} 
-                        alt="Preview" 
-                        className="w-full h-full object-cover"
-                        onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
-                          e.currentTarget.src = 'https://source.unsplash.com/oG8PIWBc3nE';
-                        }}
-                      />
-                      <div className="absolute top-0 left-0 w-full p-2 bg-gray-900 bg-opacity-50 text-white text-xs">
-                        Current
-                      </div>
-                    </div>
-                  )}
+              <TabsContent value="basic" className="space-y-6 pt-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Product Name */}
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Product Name *</Label>
+                    <Input 
+                      id="name" 
+                      value={name} 
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Enter product name"
+                      required
+                    />
+                  </div>
                   
-                  {additionalImages.map((img, index) => (
-                    <div key={index} className="relative aspect-square rounded border border-gray-200 overflow-hidden group">
-                      <img 
-                        src={img} 
-                        alt={`Product ${index + 1}`} 
-                        className="w-full h-full object-cover"
-                        onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
-                          e.currentTarget.src = 'https://source.unsplash.com/oG8PIWBc3nE';
-                        }}
-                      />
-                      <button 
-                        type="button"
-                        onClick={() => handleRemoveImage(index)}
-                        className="absolute top-2 right-2 bg-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <X size={16} className="text-red-500" />
-                      </button>
-                    </div>
-                  ))}
+                  {/* Stock */}
+                  <div className="space-y-2">
+                    <Label htmlFor="stock">Stock Quantity *</Label>
+                    <Input 
+                      id="stock" 
+                      type="number" 
+                      min="0"
+                      value={stock} 
+                      onChange={(e) => setStock(e.target.value)}
+                      placeholder="0"
+                      required
+                    />
+                  </div>
                 </div>
-              </div>
-            )}
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Original Price */}
+                  <div className="space-y-2">
+                    <Label htmlFor="original_price">Original Price (USD) *</Label>
+                    <Input 
+                      id="original_price" 
+                      type="number" 
+                      step="0.01" 
+                      min="0"
+                      value={originalPrice} 
+                      onChange={(e) => setOriginalPrice(e.target.value)}
+                      placeholder="0.00"
+                      required
+                    />
+                  </div>
+                  
+                  {/* Discount */}
+                  <div className="space-y-2">
+                    <Label htmlFor="discount">Discount (%)</Label>
+                    <Input 
+                      id="discount" 
+                      type="number" 
+                      step="0.01" 
+                      min="0"
+                      max="99.99"
+                      value={discount} 
+                      onChange={(e) => setDiscount(e.target.value)}
+                      placeholder="0.00"
+                    />
+                  </div>
+                  
+                  {/* Final Price */}
+                  <div className="space-y-2">
+                    <Label htmlFor="price">Final Price (USD) *</Label>
+                    <Input 
+                      id="price" 
+                      type="number" 
+                      step="0.01" 
+                      min="0"
+                      value={price} 
+                      onChange={(e) => setPrice(e.target.value)}
+                      placeholder="0.00"
+                      required
+                      disabled={originalPrice && discount ? true : false}
+                    />
+                    {originalPrice && discount && (
+                      <p className="text-sm text-gray-500">Auto-calculated from discount</p>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Category */}
+                <div className="space-y-2">
+                  <Label htmlFor="category">Category</Label>
+                  <Select value={category} onValueChange={setCategory}>
+                    <SelectTrigger id="category">
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((cat) => (
+                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {/* Description */}
+                <div className="space-y-2">
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea 
+                    id="description" 
+                    value={description} 
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Product description"
+                    rows={5}
+                  />
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="details" className="space-y-6 pt-4">
+                {/* Ingredients */}
+                <div className="space-y-2">
+                  <Label htmlFor="ingredients">Ingredients</Label>
+                  <Textarea 
+                    id="ingredients" 
+                    value={ingredients} 
+                    onChange={(e) => setIngredients(e.target.value)}
+                    placeholder="List of ingredients separated by commas"
+                    rows={4}
+                  />
+                  <p className="text-sm text-gray-500">
+                    Enter all ingredients separated by commas
+                  </p>
+                </div>
+                
+                {/* How to Use */}
+                <div className="space-y-2">
+                  <Label htmlFor="howToUse">How to Use</Label>
+                  <Textarea 
+                    id="howToUse" 
+                    value={howToUse} 
+                    onChange={(e) => setHowToUse(e.target.value)}
+                    placeholder="Instructions on how to use the product"
+                    rows={4}
+                  />
+                  <p className="text-sm text-gray-500">
+                    Provide clear instructions for product usage
+                  </p>
+                </div>
+                
+                {/* Benefits */}
+                <div className="space-y-2">
+                  <Label htmlFor="benefits">Product Benefits</Label>
+                  <Textarea 
+                    id="benefits" 
+                    value={benefits} 
+                    onChange={(e) => setBenefits(e.target.value)}
+                    placeholder="Enter each benefit on a new line"
+                    rows={4}
+                  />
+                  <p className="text-sm text-gray-500">
+                    Enter each benefit on a new line. These will be displayed as bullet points.
+                  </p>
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="images" className="space-y-6 pt-4">
+                {/* Primary Image URL */}
+                <div className="space-y-2">
+                  <Label htmlFor="image_url">Image URL</Label>
+                  <div className="flex space-x-2">
+                    <Input 
+                      id="image_url" 
+                      value={imageUrl} 
+                      onChange={(e) => setImageUrl(e.target.value)}
+                      placeholder="https://example.com/image.jpg"
+                      className="flex-1"
+                    />
+                    <Button 
+                      type="button" 
+                      onClick={handleAddImage}
+                      disabled={!imageUrl.trim()}
+                    >
+                      <Plus size={16} className="mr-2" /> Add to Gallery
+                    </Button>
+                  </div>
+                  <p className="text-sm text-gray-500">Add multiple images to the product gallery.</p>
+                </div>
+                
+                {/* Image Gallery */}
+                {(additionalImages.length > 0 || imageUrl) && (
+                  <div className="space-y-2">
+                    <Label className="block mb-2">Image Gallery</Label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                      {imageUrl && (
+                        <div className="relative aspect-square rounded border border-gray-200 overflow-hidden">
+                          <img 
+                            src={imageUrl} 
+                            alt="Preview" 
+                            className="w-full h-full object-cover"
+                            onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
+                              e.currentTarget.src = 'https://source.unsplash.com/oG8PIWBc3nE';
+                            }}
+                          />
+                          <div className="absolute top-0 left-0 w-full p-2 bg-gray-900 bg-opacity-50 text-white text-xs">
+                            Current
+                          </div>
+                        </div>
+                      )}
+                      
+                      {additionalImages.map((img, index) => (
+                        <div key={index} className="relative aspect-square rounded border border-gray-200 overflow-hidden group">
+                          <img 
+                            src={img} 
+                            alt={`Product ${index + 1}`} 
+                            className="w-full h-full object-cover"
+                            onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
+                              e.currentTarget.src = 'https://source.unsplash.com/oG8PIWBc3nE';
+                            }}
+                          />
+                          <button 
+                            type="button"
+                            onClick={() => handleRemoveImage(index)}
+                            className="absolute top-2 right-2 bg-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X size={16} className="text-red-500" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
             
-            <div className="pt-4">
+            <div className="pt-4 border-t mt-6">
               <Button 
                 type="submit" 
                 disabled={saving}

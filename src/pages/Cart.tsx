@@ -1,14 +1,42 @@
-
 import { Link } from 'react-router-dom';
 import { Trash2, Minus, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/hooks/useCart';
 import { Separator } from '@/components/ui/separator';
 import { formatCurrency } from '@/lib/utils';
+import { useState, useEffect } from 'react';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 
 const Cart = () => {
-  const { cart, removeFromCart, updateQuantity, getCartTotal } = useCart();
-
+  const { cart, removeFromCart, updateQuantity, getCartTotal } = useCart(); // Fixed 'Cart' to 'cart'
+  
+  // Add these new states for shipping
+  const [selectedShipping, setSelectedShipping] = useState<string>("free");
+  const [shippingCost, setShippingCost] = useState<number>(0);
+  
+  // Define shipping options
+  const shippingOptions = [
+    { id: "free", name: "Free Shipping", description: "7-10 business days", price: 0 },
+    { id: "standard", name: "Standard Shipping", description: "3-5 business days", price: 5.99 },
+    { id: "express", name: "Express Shipping", description: "1-2 business days", price: 14.99 }
+  ];
+  
+  // Update shipping cost when option changes
+  useEffect(() => {
+    const option = shippingOptions.find(option => option.id === selectedShipping);
+    setShippingCost(option?.price || 0);
+  }, [selectedShipping]);
+  
+  // Calculate order total (items + shipping)
+  const calculateTotal = () => {
+    return getCartTotal() + shippingCost;
+  };
+  
+  // Check if free shipping applies (e.g., for orders over $50)
+  const freeShippingThreshold = 50;
+  const qualifiesForFreeShipping = getCartTotal() >= freeShippingThreshold;
+  
   if (cart.length === 0) {
     return (
       <div className="container-custom py-16">
@@ -109,17 +137,61 @@ const Cart = () => {
                 <span>Subtotal</span>
                 <span>{formatCurrency(getCartTotal())}</span>
               </div>
+              
+              {/* Shipping options */}
+              <div className="mt-4 mb-2">
+                <h3 className="font-medium mb-2">Shipping Method</h3>
+                
+                <RadioGroup value={selectedShipping} onValueChange={setSelectedShipping}>
+                  {shippingOptions.map(option => (
+                    <div key={option.id} className="flex items-center space-x-2 mb-2">
+                      <RadioGroupItem 
+                        value={option.id} 
+                        id={`shipping-${option.id}`}
+                        disabled={option.id !== "free" && qualifiesForFreeShipping}
+                      />
+                      <Label 
+                        htmlFor={`shipping-${option.id}`} 
+                        className="flex justify-between w-full cursor-pointer"
+                      >
+                        <div>
+                          <span className="font-medium">{option.name}</span>
+                          <p className="text-sm text-gray-500">{option.description}</p>
+                        </div>
+                        <span>
+                          {option.price === 0 ? "Free" : formatCurrency(option.price)}
+                        </span>
+                      </Label>
+                    </div>
+                  ))}
+                </RadioGroup>
+                
+                {getCartTotal() > 0 && getCartTotal() < freeShippingThreshold && (
+                  <div className="text-sm text-gray-500 mt-2">
+                    Add {formatCurrency(freeShippingThreshold - getCartTotal())} more to qualify for free shipping
+                  </div>
+                )}
+                
+                {qualifiesForFreeShipping && (
+                  <div className="text-sm text-green-600 font-medium mt-2">
+                    You qualify for free shipping!
+                  </div>
+                )}
+              </div>
+              
               <div className="flex justify-between text-gray-600">
                 <span>Shipping</span>
-                <span>Free</span>
+                <span>{shippingCost === 0 ? "Free" : formatCurrency(shippingCost)}</span>
               </div>
+              
               <Separator />
+              
               <div className="flex justify-between font-bold text-lg">
                 <span>Total</span>
-                <span>{formatCurrency(getCartTotal())}</span>
-
+                <span>{formatCurrency(calculateTotal())}</span>
               </div>
             </div>
+            
             <Link to="/checkout">
               <Button className="w-full">Proceed to Checkout</Button>
             </Link>

@@ -1,15 +1,19 @@
-
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ShoppingCart, User, Menu, X, Search } from 'lucide-react';
 import { Button } from "@/components/ui/button";
+import { useCart } from '@/hooks/useCart'; // Import the useCart hook
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const { cart } = useCart(); // Get the cart from the hook
   
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
   const toggleSearch = () => setIsSearchOpen(!isSearchOpen);
+
+  // Calculate total items in cart
+  const cartItemCount = cart.reduce((total, item) => total + item.quantity, 0);
 
   return (
     <header className="bg-tommyfx-white shadow-sm py-4 sticky top-0 z-50">
@@ -57,7 +61,7 @@ const Navbar = () => {
             >
               <ShoppingCart size={20} />
               <span className="absolute -top-1 -right-1 bg-tommyfx-blue text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                0
+                {cartItemCount}
               </span>
             </Link>
             

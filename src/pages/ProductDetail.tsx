@@ -10,19 +10,21 @@ import {
   ShoppingCart,
   Truck,
   RefreshCw,
-  Check,
-  X,
-  Info
+  Check
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ProductCard from '@/components/ui/ProductCard';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useCart } from '@/hooks/useCart';
 import { useAuth } from '@/hooks/useAuth';
 import ReviewDialog from '@/components/reviews/ReviewDialog';
 import { useWishlist } from '@/components/wishlist/useWishlist'; 
 import SocialShareButtons from '@/components/sharing/SocialShareButtons';
+import { Product } from '@/types/index'; // Import the Product type
+import { formatCurrency } from '@/lib/utils';
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,8 +35,19 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { formatCurrency } from '@/lib/utils'; // Add this import at the top
+// Define a type for the review/feedback data
+interface Review {
+  id: string;
+  name: string;
+  rating: number;
+  date: string;
+  comment: string;
+}
 
+// Define an extended product type that includes images for UI
+interface ProductWithImages extends Product {
+  images: string[];
+}
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
   const [quantity, setQuantity] = useState(1);
@@ -47,90 +60,67 @@ const ProductDetail = () => {
   const { addToCart } = useCart();
   const { user } = useAuth();
   const { addToWishlist, isInWishlist, removeFromWishlist } = useWishlist();
-  const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
-  const [loadingRelated, setLoadingRelated] = useState(true);
-  
-  // Popup notification state
-  const [showPopup, setShowPopup] = useState(false);
-  const [popupMessage, setPopupMessage] = useState('');
-  const [popupType, setPopupType] = useState<'success' | 'error' | 'info'>('success');
+  const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
 
-  // Function to show notification popup
-  const showNotification = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
-    setPopupMessage(message);
-    setPopupType(type);
-    setShowPopup(true);
-    
-    // Auto-hide the popup after 3 seconds
-    setTimeout(() => {
-      setShowPopup(false);
-    }, 3000);
-  };
-  
   useEffect(() => {
     const fetchProduct = async () => {
       setLoading(true);
-      
       try {
-        console.log("Fetching product with ID:", id);
         const { data, error } = await supabase
           .from('products')
           .select('*')
           .eq('id', id)
           .single();
-        
-        if (error) {
-          console.error('Error fetching product:', error);
-          throw error;
-        }
-        
-        if (data) {
-          console.log("Product data:", data);
-          // Set up images array from main image and additional_images
-          const mainImage = data.image_url || 'https://source.unsplash.com/oG8PIWBc3nE';
-          let images = [mainImage];
-          
-          // Add additional images if available
-          if (data.additional_images && Array.isArray(data.additional_images)) {
-            images = [...images, ...data.additional_images];
-          }
-          
-          // Ensure we have at least 4 images for the UI (can be duplicates)
-          if (images.length < 4) {
-            const fillerCount = 4 - images.length;
-            images = [...images, ...Array(fillerCount).fill(mainImage)];
-          }
-          
-          setProduct({
-            ...data,
-            images,
-            details: {
-              ingredients: 'Aqua, Glycerin, Sodium Hyaluronate, Tocopherol, Panthenol, Niacinamide, Allantoin, Aloe Barbadensis Leaf Juice, Phenoxyethanol, Ethylhexylglycerin',
-              howToUse: 'Apply 2-3 drops to clean, dry skin morning and night. Gently press into skin, following with moisturizer.',
-              benefits: ['Deep hydration', 'Improves elasticity', 'Reduces fine lines', 'Brightens complexion']
-            }
-          });
-          
-          // Fetch reviews for this product
-          await fetchReviews(id);
+        if (error || !data) throw error || new Error('Product not found');
 
-          // Fetch related products based on category
-          if (data.category) {
-            await fetchRelatedProducts(data.category, data.id);
-          }
-        } else {
-          console.log("No product found with ID:", id);
-        }
-      } catch (error) {
-        console.error('Error fetching product:', error);
+        const mainImage = data.image_url || 'https://source.unsplash.com/oG8PIWBc3nE';
+        let images = [mainImage];
+        if (Array.isArray(data.additional_images)) images.push(...data.additional_images);
+        if (images.length < 4) images.push(...Array(4 - images.length).fill(mainImage));
+
+        setProduct({ ...data, images });
+        await fetchReviews(data.id);
+        fetchRelated(data.category, data.id);
+      } catch (err) {
+        console.error(err);
       } finally {
         setLoading(false);
       }
     };
-    
-    fetchProduct();
+    if (id) fetchProduct();
   }, [id]);
+
   
+  const fetchRelated = async (category: string, currentId: string) => {
+  try {
+    // First, try same-category products
+    let { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .eq('category', category)
+      .neq('id', currentId)
+      .limit(4);
+
+    if (error) throw error;
+
+    // If none found, fall back to any 4 other products
+    if (!data || data.length === 0) {
+      const fallback = await supabase
+        .from('products')
+        .select('*')
+        .neq('id', currentId)
+        .limit(4);
+
+      if (fallback.error) throw fallback.error;
+      data = fallback.data;
+    }
+
+    setRelatedProducts(data || []);
+  } catch (err) {
+    console.error('Error fetching related products:', err);
+  }
+  };
+
   const fetchReviews = async (productId: string) => {
     try {
       // Get approved feedback for this product
@@ -192,41 +182,6 @@ const ProductDetail = () => {
     }
   };
 
-  // Fetch related products based on category
-  const fetchRelatedProducts = async (category: string, currentProductId: string) => {
-    setLoadingRelated(true);
-    try {
-      // Get products with the same category, excluding the current product
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .eq('category', category)
-        .neq('id', currentProductId)
-        .limit(4);
-        
-      if (error) throw error;
-      
-      if (data && data.length > 0) {
-        setRelatedProducts(data);
-      } else {
-        // If no related products in the same category, get any 4 products
-        const { data: otherProducts, error: otherError } = await supabase
-          .from('products')
-          .select('*')
-          .neq('id', currentProductId)
-          .limit(4);
-          
-        if (otherError) throw otherError;
-        
-        setRelatedProducts(otherProducts || []);
-      }
-    } catch (error) {
-      console.error('Error fetching related products:', error);
-    } finally {
-      setLoadingRelated(false);
-    }
-  };
-
   const incrementQuantity = () => setQuantity(prev => prev + 1);
   const decrementQuantity = () => setQuantity(prev => (prev > 1 ? prev - 1 : 1));
 
@@ -239,15 +194,21 @@ const ProductDetail = () => {
         image: product.image_url,
         quantity
       });
-      
-      // Show popup notification
-      showNotification(`${quantity} x ${product.name} added to your cart`);
+      toast({
+        title: "Added to cart",
+        description: `${quantity} x ${product.name} added to your cart`,
+        duration: 3000 // Show toast for 3 seconds
+      });
     }
   };
   
   const handleOpenReviewDialog = () => {
     if (!user) {
-      showNotification("You need to be logged in to write a review.", "error");
+      toast({
+        title: "Please log in",
+        description: "You need to be logged in to write a review.",
+        variant: "destructive"
+      });
       return;
     }
     setReviewDialogOpen(true);
@@ -258,7 +219,10 @@ const ProductDetail = () => {
     
     if (isInWishlist(product.id)) {
       removeFromWishlist(product.id);
-      showNotification(`${product.name} has been removed from your wishlist`);
+      toast({
+        title: "Removed from wishlist",
+        description: `${product.name} has been removed from your wishlist`,
+      });
     } else {
       addToWishlist({
         id: product.id,
@@ -266,14 +230,20 @@ const ProductDetail = () => {
         price: product.discount_price ? product.discount_price : product.price,
         image: product.image_url || product.images[0]
       });
-      showNotification(`${product.name} has been added to your wishlist`);
+      toast({
+        title: "Added to wishlist",
+        description: `${product.name} has been added to your wishlist`,
+      });
     }
   };
 
   const handleReviewSubmitted = async () => {
     // After a review is submitted, fetch the reviews again
     if (id) {
-      showNotification("Review submitted. Your review will appear after approval by an administrator.");
+      toast({
+        title: "Review submitted",
+        description: "Your review will appear after approval by an administrator.",
+      });
       await fetchReviews(id);
       setReviewDialogOpen(false);
     }
@@ -317,6 +287,7 @@ const ProductDetail = () => {
     ? Math.round(product.discount_percent)
     : null;
 
+    
   return (
     <div>
       {/* Breadcrumb */}
@@ -401,7 +372,7 @@ const ProductDetail = () => {
               {product.discount_percent ? (
                 <div className="mb-6">
                   <p className="text-2xl font-bold text-tommyfx-blue">{formatCurrency(product.price)}</p>
-                  <p className="text-gray-500 line-through">{formatCurrency(product.original_price)}</p>
+                  <p className="text-gray-500 line-through">{formatCurrency(product.price)}</p>
                 </div>
               ) : (
                 <p className="text-2xl font-bold mb-6">{formatCurrency(product.price)}</p>
@@ -500,26 +471,31 @@ const ProductDetail = () => {
               <div className="prose max-w-none">
                 <h3 className="text-xl font-medium mb-4">Product Details</h3>
                 <p className="mb-4">{product.description}</p>
-                <h4 className="text-lg font-medium mb-3">Benefits</h4>
-                <ul className="list-disc pl-5 space-y-2">
-                  {product.details?.benefits?.map((benefit: string, index: number) => (
-                    <li key={index}>{benefit}</li>
-                  ))}
-                </ul>
+                
+                {Array.isArray(product.benefits) && product.benefits.length > 0 && (
+                  <>
+                    <h4 className="text-lg font-medium mb-3">Benefits</h4>
+                    <ul className="list-disc pl-5 space-y-2">
+                      {product.benefits.map((benefit: string, index: number) => (
+                        <li key={index}>{benefit}</li>
+                      ))}
+                    </ul>
+                  </>
+                )}
               </div>
             </TabsContent>
             
             <TabsContent value="ingredients" className="animate-fade-in">
               <div className="prose max-w-none">
                 <h3 className="text-xl font-medium mb-4">Ingredients</h3>
-                <p>{product.details?.ingredients}</p>
+                <p>{product.ingredients || "Ingredients information not available for this product."}</p>
               </div>
             </TabsContent>
             
             <TabsContent value="howToUse" className="animate-fade-in">
               <div className="prose max-w-none">
                 <h3 className="text-xl font-medium mb-4">How to Use</h3>
-                <p>{product.details?.howToUse}</p>
+                <p>{product.how_to_use || "Usage instructions not available for this product."}</p>
               </div>
             </TabsContent>
             
@@ -567,35 +543,25 @@ const ProductDetail = () => {
       <section className="py-12">
         <div className="container-custom">
           <h2 className="text-2xl font-bold mb-6">You May Also Like</h2>
-          
-          {loadingRelated ? (
+          {relatedProducts.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {Array(4).fill(null).map((_, idx) => (
-                <div key={idx} className="bg-gray-100 rounded-lg animate-pulse h-64"></div>
-              ))}
-            </div>
-          ) : relatedProducts.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {relatedProducts.map(product => (
+              {relatedProducts.map(prod => (
                 <ProductCard
-                  key={product.id}
-                  id={product.id}
-                  name={product.name}
-                  price={parseFloat(product.price)}
-                  image={product.image_url || 'https://source.unsplash.com/oG8PIWBc3nE'}
-                  category={product.category}
-                  originalPrice={product.original_price ? parseFloat(product.original_price) : undefined}
-                  discountPercent={product.discount_percent ? parseFloat(product.discount_percent) : undefined}
+                  key={prod.id}
+                  id={prod.id}
+                  name={prod.name}
+                  price={prod.discount_percent ?? prod.price}    // ← use prod here
+                  image={prod.image_url || 'https://source.unsplash.com/oG8PIWBc3nE'}
+                  category={prod.category}
                 />
               ))}
             </div>
           ) : (
-            <div className="text-center py-8">
-              <p className="text-gray-500">No related products found.</p>
-            </div>
+            <p className="text-center text-gray-500">No related products found.</p>
           )}
         </div>
       </section>
+
       
       {/* Review Dialog */}
       <ReviewDialog 
@@ -628,43 +594,10 @@ const ProductDetail = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {/* Custom Popup Notification */}
-      {/* Custom Popup Notification */}
-      {showPopup && (
-        <div className="fixed top-4 right-4 z-50 w-72 overflow-hidden rounded-md bg-white shadow-lg border border-gray-200 animate-in slide-in-from-top-3">
-          <div className={`px-4 py-3 ${
-            popupType === 'success' ? 'bg-green-50 border-l-4 border-l-green-500' : 
-            popupType === 'error' ? 'bg-red-50 border-l-4 border-l-red-500' : 'bg-blue-50 border-l-4 border-l-blue-500'
-          }`}>
-            <div className="flex items-center">
-              <div className="flex-shrink-0 mr-2">
-                {popupType === 'success' ? (
-                  <Check className="h-5 w-5 text-green-500" />
-                ) : popupType === 'error' ? (
-                  <X className="h-5 w-5 text-red-500" />
-                ) : (
-                  <Info className="h-5 w-5 text-blue-500" />
-                )}
-              </div>
-              <div className="flex-grow">
-                <p className="text-sm font-medium">
-                  {popupMessage}
-                </p>
-              </div>
-              <button
-                type="button"
-                className="ml-3 flex-shrink-0 text-gray-400 hover:text-gray-500"
-                onClick={() => setShowPopup(false)}
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
 
 export default ProductDetail;
+
+

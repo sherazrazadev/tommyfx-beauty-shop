@@ -8,11 +8,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Info, CheckCircle } from 'lucide-react';
+import { Info } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
+// import { sendOrderConfirmationEmail } from '@/integrations/sendgrid/emailUtils';
+import { sendOrderConfirmationEmail } from '@/integrations/sendgrid/emailClient';
 
 const Checkout = () => {
-  const { cart, getCartTotal, clearCart } = useCart();
+  const { cart, getCartTotal, clearCart, shipping } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
@@ -23,11 +25,13 @@ const Checkout = () => {
     city: '',
     state: '',
     zip: '',
+    country: 'Pakistan',  // Add this line with a default value
+
   });
   const [processing, setProcessing] = useState(false);
   const [checkoutAsGuest, setCheckoutAsGuest] = useState(!user);
 
-  const total = getCartTotal();
+  const total = getCartTotal() + (shipping?.cost || 0);
 
   useEffect(() => {
     if (user) {
@@ -39,6 +43,7 @@ const Checkout = () => {
         city: '',
         state: '',
         zip: '',
+        country:'',
       });
     }
   }, [user]);
@@ -69,33 +74,29 @@ const Checkout = () => {
 
     setProcessing(true);
     try {
-      // Create a new order in the database using only the fields that exist in your schema
-      const orderData = {
-        user_id: user?.id || null,
-        total_amount: total,
-        status: 'pending',
-        payment_method: 'credit_card',
-        shipping_address: formData.address,
-        shipping_city: formData.city,
-        shipping_state: formData.state,
-        shipping_zip: formData.zip,
-        shipping_country: '', // this exists in your schema but is empty
-      };
-
-      console.log("Creating order with data:", orderData);
-
-      const { data: orderResult, error: orderError } = await supabase
+      // Create a new order in the database
+      const { data: orderData, error: orderError } = await supabase
         .from('orders')
-        .insert([orderData])
-        .select();
+        .insert([
+          {
+            user_id: user?.id || null,
+            total_amount: total,
+            status: 'pending',
+            payment_method: 'COD', // Default payment method
+            shipping_address: formData.address,
+            shipping_city: formData.city,
+            shipping_state: formData.state,
+            shipping_zip: formData.zip,
+            phone: formData.phone, // Add phone to order
+          }
+        ])
+        .select()
 
       if (orderError) {
-        console.error("Order creation error:", orderError);
         throw orderError;
       }
 
-      console.log("Order created successfully:", orderResult);
-      const newOrder = orderResult ? orderResult[0] : null;
+      const newOrder = orderData ? orderData[0] : null;
 
       if (!newOrder) {
         throw new Error('Failed to create order');
@@ -109,42 +110,45 @@ const Checkout = () => {
         price: item.price,
       }));
 
-      console.log("Creating order items:", orderItems);
       const { error: orderItemsError } = await supabase
         .from('order_items')
         .insert(orderItems);
 
       if (orderItemsError) {
-        console.error("Order items error:", orderItemsError);
         throw orderItemsError;
       }
 
-      console.log("Order items created successfully");
+      // Send order confirmation email
+      try {
+        await sendOrderConfirmationEmail(
+          newOrder,
+          {
+            name: formData.name,
+            email: formData.email,
+            address: formData.address,
+            city: formData.city,
+            state: formData.state,
+            zip: formData.zip,
+            country: formData.country
+          },
+          cart
+        );
+      } catch (emailError) {
+        console.error("Failed to send order confirmation email:", emailError);
+        // Don't stop the checkout process if email fails
+      }
 
       // Clear the cart
       clearCart();
 
-      // Show enhanced success message
+      // Show success message
       toast({
-        title: "Order placed successfully!",
-        description: (
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2 text-green-600">
-              <CheckCircle className="h-5 w-5" />
-              <span className="font-medium">Your order has been confirmed</span>
-            </div>
-            <p>Thank you for your purchase! You will receive a confirmation email shortly.</p>
-          </div>
-        ),
-        variant: "default",
-        duration: 5000, // Show for 5 seconds
+        title: "Order placed",
+        description: "Your order has been successfully placed! You'll receive a confirmation email shortly.",
       });
 
-      // Redirect to home/categories page after a short delay
-      setTimeout(() => {
-        navigate('/categories');
-      }, 2000);
-      
+      // Redirect to order confirmation page or home page
+      navigate('/');
     } catch (error: any) {
       console.error("Checkout failed:", error);
       toast({
@@ -198,8 +202,21 @@ const Checkout = () => {
                     <span>{formatCurrency(item.price * item.quantity)}</span>
                   </div>
                 ))}
+                
+                <div className="flex justify-between text-gray-600">
+                  <span>Subtotal</span>
+                  <span>{formatCurrency(getCartTotal())}</span>
+                </div>
+                
+                {shipping && (
+                  <div className="flex justify-between text-gray-600">
+                    <span>Shipping {shipping.name ? `(${shipping.name})` : ''}</span>
+                    <span>{shipping.cost === 0 ? "Free" : formatCurrency(shipping.cost)}</span>
+                  </div>
+                )}
+                
                 <div className="flex justify-between font-bold">
-                  <span>Total</span>
+                  <span>Total:</span>
                   <span>{formatCurrency(total)}</span>
                 </div>
               </div>
@@ -244,7 +261,7 @@ const Checkout = () => {
                   name="phone"
                   value={formData.phone}
                   onChange={handleChange}
-                  placeholder="(123) 456-7890"
+                  placeholder="923074567890"
                   required
                 />
               </div>
@@ -294,12 +311,24 @@ const Checkout = () => {
                   required
                 />
               </div>
+              {/* Add this to your form */}
+              <div>
+                <Label htmlFor="country">Country *</Label>
+                <Input
+                  type="text"
+                  id="country"
+                  name="country"
+                  value={formData.country}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
               <Button 
                 type="submit" 
                 disabled={processing || cart.length === 0}
                 className="w-full"
               >
-                {processing ? "Processing..." : "Place Order"}
+                {processing ? "Processing..." : `Place Order (${formatCurrency(total)})`}
               </Button>
             </form>
           </CardContent>

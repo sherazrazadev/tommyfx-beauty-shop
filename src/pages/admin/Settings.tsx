@@ -12,11 +12,16 @@ import { Switch } from '@/components/ui/switch';
 import { toast } from '@/components/ui/use-toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import AdminLayout from '@/components/layout/AdminLayout';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { Profile } from '@/types/index'; // Import the Profile type
 
 const Settings = () => {
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState('general');
-  
+  // Inside your Settings component:
+  const { user } = useAuth(); // Get the current user
+
   // General settings
   const [storeName, setStoreName] = useState('TommyFX Beauty');
   const [storeEmail, setStoreEmail] = useState('info@tommyfx-beauty.com');
@@ -46,18 +51,129 @@ const Settings = () => {
   const [allowGuestCheckout, setAllowGuestCheckout] = useState(true);
   const [enableTwoFactorAuth, setEnableTwoFactorAuth] = useState(false);
   const [passwordStrengthLevel, setPasswordStrengthLevel] = useState('medium');
-  
-  const handleSave = (tab: string) => {
+  // Inside your Settings component:
+  // Add a function to fetch settings
+  // Add a function to fetch settings
+  const fetchSettings = async () => {
+    if (!user) return null;
+    
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*') // Select all columns to make TypeScript happy
+        .eq('id', user.id)
+        .single();
+        
+        
+      if (error) {
+        console.error('Error fetching settings:', error);
+        return null;
+      }
+      
+      // Cast data to our Profile type that includes settings
+      const profile = data as unknown as Profile;
+      return profile?.settings || null;
+    } catch (error) {
+      console.error('Error fetching settings:', error);
+      return null;
+    }
+  };
+
+  // Add this useEffect to load general settings when the component mounts or tab changes
+
+  // Add this useEffect to load settings when the component mounts
+  useEffect(() => {
+    const loadSettings = async () => {
+      const settings = await fetchSettings();
+      if (settings) {
+        // Load general settings if available
+        if (settings.general) {
+          setStoreName(settings.general.storeName || 'TommyFX Beauty');
+          setStoreEmail(settings.general.storeEmail || 'info@tommyfx-beauty.com');
+          setStorePhone(settings.general.storePhone || '+1 (555) 123-4567');
+          setStoreAddress(settings.general.storeAddress || '123 Beauty Ave, New York, NY 10001');
+          setStoreLogo(settings.general.storeLogo || '');
+          setStoreDescription(settings.general.storeDescription || 'Premium beauty products for every skin type.');
+          setDefaultCurrency(settings.general.defaultCurrency || 'USD');
+        }
+        
+        // Load other settings as needed when the appropriate tab is selected
+        if (activeTab === 'email' && settings.email) {
+          setOrderConfirmationTemplate(settings.email.orderConfirmationTemplate || '');
+          setWelcomeEmailTemplate(settings.email.welcomeEmailTemplate || '');
+          setSendOrderConfirmation(settings.email.sendOrderConfirmation !== false);
+          setSendShipmentUpdates(settings.email.sendShipmentUpdates !== false);
+          setSendMarketingEmails(settings.email.sendMarketingEmails === true);
+        }
+        
+        // Add other settings as needed
+      }
+    };
+    
+    loadSettings();
+  }, [activeTab, user]);
+
+  // Update the handleSave function to actually save to Supabase
+  // Update the handleSave function to save to the user's profile
+  const handleSave = async (tab: string) => {
+    if (!user) return;
+    
     setSaving(true);
     
-    // Simulate saving to the server
-    setTimeout(() => {
-      setSaving(false);
+    try {
+      // First get the current settings
+      const currentSettings = await fetchSettings() || {};
+      
+      // Prepare the new settings object based on which tab is being saved
+      let updatedSettings = { ...currentSettings };
+      
+      if (tab === 'general') {
+        updatedSettings.general = {
+          storeName,
+          storeEmail,
+          storePhone,
+          storeAddress,
+          storeLogo,
+          storeDescription,
+          defaultCurrency
+        };
+      } else if (tab === 'email') {
+        updatedSettings.email = {
+          orderConfirmationTemplate,
+          welcomeEmailTemplate,
+          sendOrderConfirmation,
+          sendShipmentUpdates,
+          sendMarketingEmails
+        };
+      }
+      // Add other tabs here
+      
+      // Save to user's profile
+      // Save to user's profile using typed update
+      const { error } = await supabase
+        .from('profiles')
+        .update({ 
+          settings: updatedSettings as any // Use type assertion
+        } as any) // Use type assertion for the whole object
+        .eq('id', user.id);
+        
+      if (error) throw error;
+      
       toast({
         title: 'Settings Saved',
         description: `Your ${tab} settings have been updated successfully.`,
       });
-    }, 800);
+      
+    } catch (error) {
+      console.error(`Error saving ${tab} settings:`, error);
+      toast({
+        title: 'Error',
+        description: `Failed to save ${tab} settings. Please try again.`,
+        variant: 'destructive'
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
