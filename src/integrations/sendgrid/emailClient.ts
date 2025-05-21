@@ -7,7 +7,7 @@
  */
 // emailClient.ts
 export async function sendOrderConfirmationEmail(order, customer, cartItems) {
-  const res = await fetch('/api/email', {      // ← relative path here
+  const res = await fetch('/api/send-email', {      // ← relative path here
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ order, customer, cartItems }),
