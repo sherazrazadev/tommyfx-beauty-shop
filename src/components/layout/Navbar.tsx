@@ -2,17 +2,19 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ShoppingCart, User, Menu, X, Search } from 'lucide-react';
 import { Button } from "@/components/ui/button";
-import { useCart } from '@/hooks/useCart'; // Import the useCart hook
+import { useCart } from '@/hooks/useCart';
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const { cart } = useCart(); // Get the cart from the hook
+  const { cart } = useCart();
   
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
   const toggleSearch = () => setIsSearchOpen(!isSearchOpen);
+  
+  // Auto-close menu when navigation link is clicked
+  const handleNavClick = () => setIsMenuOpen(false);
 
-  // Calculate total items in cart
   const cartItemCount = cart.reduce((total, item) => total + item.quantity, 0);
 
   return (
@@ -21,7 +23,7 @@ const Navbar = () => {
         <div className="flex items-center justify-between">
           {/* Logo */}
           <div className="flex-shrink-0">
-            <Link to="/" className="flex items-center">
+            <Link to="/" className="flex items-center" onClick={handleNavClick}>
               <span className="font-serif font-bold text-2xl text-tommyfx-black">
                 Tommy<span className="text-tommyfx-blue">FX</span>
               </span>
@@ -91,15 +93,45 @@ const Navbar = () => {
           </div>
         )}
 
-        {/* Mobile Navigation */}
+        {/* Mobile Navigation - Auto-close on link click */}
         {isMenuOpen && (
           <nav className="md:hidden pt-4 animate-fade-in">
             <div className="flex flex-col space-y-4">
-              <Link to="/" className="font-medium p-2 hover:bg-gray-50 rounded-md">Home</Link>
-              <Link to="/categories" className="font-medium p-2 hover:bg-gray-50 rounded-md">Shop</Link>
-              <Link to="/about" className="font-medium p-2 hover:bg-gray-50 rounded-md">About</Link>
-              <Link to="/contact" className="font-medium p-2 hover:bg-gray-50 rounded-md">Contact</Link>
-              <Link to="/profile" className="font-medium p-2 hover:bg-gray-50 rounded-md">My Account</Link>
+              <Link 
+                to="/" 
+                className="font-medium p-2 hover:bg-gray-50 rounded-md"
+                onClick={handleNavClick}
+              >
+                Home
+              </Link>
+              <Link 
+                to="/categories" 
+                className="font-medium p-2 hover:bg-gray-50 rounded-md"
+                onClick={handleNavClick}
+              >
+                Shop
+              </Link>
+              <Link 
+                to="/about" 
+                className="font-medium p-2 hover:bg-gray-50 rounded-md"
+                onClick={handleNavClick}
+              >
+                About
+              </Link>
+              <Link 
+                to="/contact" 
+                className="font-medium p-2 hover:bg-gray-50 rounded-md"
+                onClick={handleNavClick}
+              >
+                Contact
+              </Link>
+              <Link 
+                to="/profile" 
+                className="font-medium p-2 hover:bg-gray-50 rounded-md"
+                onClick={handleNavClick}
+              >
+                My Account
+              </Link>
             </div>
           </nav>
         )}

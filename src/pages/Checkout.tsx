@@ -12,18 +12,18 @@ import { formatCurrency } from '@/lib/utils';
 // TypeScript declaration for EmailJS
 declare global {
   interface Window {
-    emailjs: {
+    emailjs?: {
       init: (publicKey: string) => void;
       send: (serviceId: string, templateId: string, params: any) => Promise<any>;
     };
   }
 }
 
-// EmailJS configuration (add to your .env)
+// EmailJS configuration - Your actual values
 const EMAILJS_CONFIG = {
-  SERVICE_ID: 'service_tommyfx', // Your EmailJS service ID
-  TEMPLATE_ID: 'template_order', // Your EmailJS template ID  
-  PUBLIC_KEY: 'your_public_key'  // Your EmailJS public key
+  SERVICE_ID: 'service_k4fbtcp',
+  TEMPLATE_ID: 'template_kxa0b6r',
+  PUBLIC_KEY: '-EsbRIt0G73FvbsW2'
 };
 
 const Checkout = () => {
@@ -35,8 +35,8 @@ const Checkout = () => {
     phone: '',
     address: '',
     city: '',
-    state: '', // Optional
-    zip: '',   // Optional
+    state: '',
+    zip: '',
     country: 'Pakistan',
   });
   const [processing, setProcessing] = useState(false);
@@ -72,67 +72,75 @@ const Checkout = () => {
     return true;
   };
 
-  // Client-side email using EmailJS (more reliable for free plans)
-  const sendOrderEmail = async (orderData: any) => {
-    try {
-      // Load EmailJS if not already loaded
-      if (!window.emailjs) {
-        const script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js';
-        document.head.appendChild(script);
-        await new Promise<void>((resolve) => {
-          script.onload = () => resolve();
-        });
-        window.emailjs.init(EMAILJS_CONFIG.PUBLIC_KEY);
-      }
+  // Fixed EmailJS implementation
+  const sendOrderEmailDirect = async (orderData: any) => {
 
-      const emailParams = {
-        to_email: formData.email,
-        to_name: formData.name,
-        order_id: orderData.id.substring(0, 8),
-        order_date: new Date().toLocaleDateString(),
-        customer_name: formData.name,
-        customer_phone: formData.phone,
-        customer_address: `${formData.address}, ${formData.city}${formData.state ? `, ${formData.state}` : ''}${formData.zip ? ` ${formData.zip}` : ''}, ${formData.country}`,
-        order_items: cart.map(item => 
-          `${item.name} (Qty: ${item.quantity}) - Rs. ${(item.price * item.quantity).toFixed(2)}`
-        ).join('\n'),
-        order_total: total.toFixed(2),
-        company_email: 'tommyfx.pk@gmail.com',
-        company_phone: '+92 (306) 714-5010'
-      };
+    // DEVELOPMENT: Email disabled - uncomment below to enable
+    console.log('📧 Email disabled for development');
+    return false;
+    // try {
+    //   // Load EmailJS script if not loaded
+    //   if (!window.emailjs) {
+    //     const script = document.createElement('script');
+    //     script.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js';
+    //     script.async = true;
+    //     document.head.appendChild(script);
+        
+    //     await new Promise<void>((resolve, reject) => {
+    //       script.onload = () => resolve();
+    //       script.onerror = () => reject(new Error('Failed to load EmailJS'));
+    //     });
+        
+    //     // Initialize EmailJS
+    //     window.emailjs?.init(EMAILJS_CONFIG.PUBLIC_KEY);
+    //   }
 
-      await window.emailjs.send(
-        EMAILJS_CONFIG.SERVICE_ID,
-        EMAILJS_CONFIG.TEMPLATE_ID,
-        emailParams
-      );
+    //   // Prepare email data - Match your template exactly
+    //   const emailParams = {
+    //     // IMPORTANT: Your template uses {{email}} in "To email" field
+    //     email: formData.email,           // This matches {{email}} in your template
+    //     to_name: formData.name,          // This matches {{to_name}} in your template
+        
+    //     // Order details for your template
+    //     order_id: orderData.id.substring(0, 8),
+    //     order_items: cart.map(item => 
+    //       `${item.name} (Qty: ${item.quantity}) - Rs. ${(item.price * item.quantity).toFixed(2)}`
+    //     ).join('\n'),
+    //     order_total: `Rs. ${total.toFixed(2)}`,
+        
+    //     // Additional useful fields (optional)
+    //     customer_name: formData.name,
+    //     customer_phone: formData.phone,
+    //     customer_address: `${formData.address}, ${formData.city}${formData.state ? `, ${formData.state}` : ''}${formData.zip ? ` ${formData.zip}` : ''}, ${formData.country}`,
+    //     order_date: new Date().toLocaleDateString('en-US', {
+    //       year: 'numeric',
+    //       month: 'long',
+    //       day: 'numeric'
+    //     })
+    //   };
 
-      console.log('Email sent via EmailJS');
-    } catch (error) {
-      console.error('Email failed:', error);
-      // Don't block checkout
-    }
-  };
+    //   console.log('📧 Sending email with params:', emailParams);
 
-  // Simple webhook alternative (no email dependency)
-  const sendOrderWebhook = async (orderData: any) => {
-    try {
-      // Simple webhook to notify admin (can use Zapier, Make.com, or Discord webhook)
-      await fetch('https://hooks.zapier.com/hooks/catch/your_webhook_id/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          order_id: orderData.id,
-          customer: formData,
-          items: cart,
-          total: total,
-          timestamp: new Date().toISOString()
-        })
-      });
-    } catch (error) {
-      console.error('Webhook failed:', error);
-    }
+    //   // Send email via EmailJS
+    //   const result = await window.emailjs?.send(
+    //     EMAILJS_CONFIG.SERVICE_ID,
+    //     EMAILJS_CONFIG.TEMPLATE_ID,
+    //     emailParams
+    //   );
+
+    //   console.log('✅ Email sent successfully:', result);
+    //   return true;
+      
+    // } catch (error: any) {
+    //   console.error('❌ Email failed:', error);
+      
+    //   // Log specific error details
+    //   if (error.text) {
+    //     console.error('Error details:', error.text);
+    //   }
+      
+    //   return false;
+    // }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -152,7 +160,7 @@ const Checkout = () => {
     setProcessing(true);
 
     try {
-      // Create order in database
+      // 1. Create order in database
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
         .insert({
@@ -172,7 +180,7 @@ const Checkout = () => {
 
       if (orderError) throw orderError;
 
-      // Create order items
+      // 2. Create order items
       const orderItems = cart.map(item => ({
         order_id: orderData.id,
         product_name: item.name,
@@ -186,22 +194,19 @@ const Checkout = () => {
 
       if (itemsError) throw itemsError;
 
-      // Send notifications (non-blocking)
-      Promise.all([
-        sendOrderEmail(orderData),
-        sendOrderWebhook(orderData)
-      ]).catch(console.error);
+      // 3. Send confirmation email (non-blocking)
+      const emailSent = await sendOrderEmailDirect(orderData);
 
-      // Success
+      // 4. Clear cart and show success
       clearCart();
       
       toast({
         title: "Order Placed Successfully! 🎉",
-        description: `Order #${orderData.id.substring(0, 8)} confirmed. Check your email for details.`,
-        duration: 2000 // 2 seconds
+        description: `Order #${orderData.id.substring(0, 8)} confirmed.${emailSent ? ' Check your email for details.' : ' We\'ll contact you at ' + formData.phone + ' soon.'}`,
+        duration: 2000
       });
 
-      // Redirect after toast
+      // 5. Redirect after toast
       setTimeout(() => navigate('/'), 2100);
       
     } catch (error: any) {

@@ -116,93 +116,7 @@ const Contact = () => {
       <section className="py-16">
         <div className="container-custom">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Contact Information */}
-            <div>
-              <div className="bg-white p-8 rounded-lg shadow-sm mb-8">
-                <h2 className="text-2xl font-bold mb-6">Get In Touch</h2>
-                <p className="text-gray-600 mb-6">
-                  We'd love to hear from you! Whether you have a question about our products,
-                  orders, or anything else, our team is here to help.
-                </p>
-                
-                <div className="space-y-4">
-                  <div className="flex items-start">
-                    <MapPin size={20} className="mr-3 mt-1 text-tommyfx-blue flex-shrink-0" />
-                    <div>
-                      <h3 className="font-medium">Visit Us</h3>
-                      <address className="text-gray-600 not-italic">
-                        Lahore, Punjab, Pakistan
-                      </address>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-start">
-                    <Phone size={20} className="mr-3 mt-1 text-tommyfx-blue flex-shrink-0" />
-                    <div>
-                      <h3 className="font-medium">Call Us</h3>
-                      <p className="text-gray-600">
-                        <a href="tel:+923067145010" className="hover:text-tommyfx-blue">
-                          +92 (306) 714-5010
-                        </a>
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-start">
-                    <Mail size={20} className="mr-3 mt-1 text-tommyfx-blue flex-shrink-0" />
-                    <div>
-                      <h3 className="font-medium">Email Us</h3>
-                      <p className="text-gray-600">
-                        <a href="mailto:tommyfx.pk@gmail.com" className="hover:text-tommyfx-blue">
-                          tommyfx.pk@gmail.com
-                        </a>
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-start">
-                    <Clock size={20} className="mr-3 mt-1 text-tommyfx-blue flex-shrink-0" />
-                    <div>
-                      <h3 className="font-medium">Business Hours</h3>
-                      <p className="text-gray-600">
-                        Saturday: 10am - 4pm<br />
-                        Sunday: Closed
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="bg-tommyfx-blue text-white p-8 rounded-lg shadow-sm">
-                <h3 className="text-xl font-bold mb-4">Follow Us</h3>
-                <p className="mb-4">
-                  Stay updated with our latest products, tips, and promotions.
-                </p>
-                <div className="flex space-x-4">
-                  <a href="https://www.facebook.com/profile.php?id=61575684157555" target="_blank" rel="noopener noreferrer" className="hover:opacity-80 transition-opacity">
-                    <div className="w-10 h-10 rounded-full bg-white bg-opacity-20 flex items-center justify-center">
-                      F
-                    </div>
-                  </a>
-                  <a href="https://www.tiktok.com/@tommyfx.pk" target="_blank" rel="noopener noreferrer" className="hover:opacity-80 transition-opacity">
-                    <div className="w-10 h-10 rounded-full bg-white bg-opacity-20 flex items-center justify-center">
-                      T
-                    </div>
-                  </a>
-                  <a href="https://www.instagram.com/tommyfx.pk" target="_blank" rel="noopener noreferrer" className="hover:opacity-80 transition-opacity">
-                    <div className="w-10 h-10 rounded-full bg-white bg-opacity-20 flex items-center justify-center">
-                      I
-                    </div>
-                  </a>
-                  <a href="https://www.pinterest.com/tommyfx.pk" target="_blank" rel="noopener noreferrer" className="hover:opacity-80 transition-opacity">
-                    <div className="w-10 h-10 rounded-full bg-white bg-opacity-20 flex items-center justify-center">
-                      P
-                    </div>
-                  </a>
-                </div>
-              </div>
-            </div>
-            
+
             {/* Contact Form */}
             <div className="lg:col-span-2">
               <div className="bg-white p-8 rounded-lg shadow-sm">
@@ -300,6 +214,95 @@ const Contact = () => {
                 )}
               </div>
             </div>
+                
+                        {/* Contact Information */}
+            <div>
+              <div className="bg-white p-8 rounded-lg shadow-sm mb-8">
+                <h2 className="text-2xl font-bold mb-6">Get In Touch</h2>
+                <p className="text-gray-600 mb-6">
+                  We'd love to hear from you! Whether you have a question about our products,
+                  orders, or anything else, our team is here to help.
+                </p>
+                
+                <div className="space-y-4">
+                  <div className="flex items-start">
+                    <MapPin size={20} className="mr-3 mt-1 text-tommyfx-blue flex-shrink-0" />
+                    <div>
+                      <h3 className="font-medium">Visit Us</h3>
+                      <address className="text-gray-600 not-italic">
+                        Lahore, Punjab, Pakistan
+                      </address>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start">
+                    <Phone size={20} className="mr-3 mt-1 text-tommyfx-blue flex-shrink-0" />
+                    <div>
+                      <h3 className="font-medium">Call Us</h3>
+                      <p className="text-gray-600">
+                        <a href="tel:+923067145010" className="hover:text-tommyfx-blue">
+                          +92 (306) 714-5010
+                        </a>
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start">
+                    <Mail size={20} className="mr-3 mt-1 text-tommyfx-blue flex-shrink-0" />
+                    <div>
+                      <h3 className="font-medium">Email Us</h3>
+                      <p className="text-gray-600">
+                        <a href="mailto:tommyfx.pk@gmail.com" className="hover:text-tommyfx-blue">
+                          tommyfx.pk@gmail.com
+                        </a>
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start">
+                    <Clock size={20} className="mr-3 mt-1 text-tommyfx-blue flex-shrink-0" />
+                    <div>
+                      <h3 className="font-medium">Business Hours</h3>
+                      <p className="text-gray-600">
+                        Saturday: 10am - 4pm<br />
+                        Sunday: Closed
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-tommyfx-blue text-white p-8 rounded-lg shadow-sm">
+                <h3 className="text-xl font-bold mb-4">Follow Us</h3>
+                <p className="mb-4">
+                  Stay updated with our latest products, tips, and promotions.
+                </p>
+                <div className="flex space-x-4">
+                  <a href="https://www.facebook.com/profile.php?id=61575684157555" target="_blank" rel="noopener noreferrer" className="hover:opacity-80 transition-opacity">
+                    <div className="w-10 h-10 rounded-full bg-white bg-opacity-20 flex items-center justify-center">
+                      F
+                    </div>
+                  </a>
+                  <a href="https://www.tiktok.com/@tommyfx.pk" target="_blank" rel="noopener noreferrer" className="hover:opacity-80 transition-opacity">
+                    <div className="w-10 h-10 rounded-full bg-white bg-opacity-20 flex items-center justify-center">
+                      T
+                    </div>
+                  </a>
+                  <a href="https://www.instagram.com/tommyfx.pk" target="_blank" rel="noopener noreferrer" className="hover:opacity-80 transition-opacity">
+                    <div className="w-10 h-10 rounded-full bg-white bg-opacity-20 flex items-center justify-center">
+                      I
+                    </div>
+                  </a>
+                  <a href="https://www.pinterest.com/tommyfx.pk" target="_blank" rel="noopener noreferrer" className="hover:opacity-80 transition-opacity">
+                    <div className="w-10 h-10 rounded-full bg-white bg-opacity-20 flex items-center justify-center">
+                      P
+                    </div>
+                  </a>
+                </div>
+              </div>
+            </div>
+            
+
           </div>
         </div>
       </section>
@@ -343,43 +346,51 @@ const Contact = () => {
       <section className="py-16">
         <div className="container-custom max-w-4xl">
           <h2 className="text-2xl font-bold mb-8 text-center">Frequently Asked Questions</h2>
-          
+
           <div className="space-y-4">
             <div className="bg-white p-6 rounded-lg shadow-sm">
-              <h3 className="font-bold mb-2">What are your shipping rates?</h3>
+              <h3 className="font-bold mb-2">What are your shipping rates within Pakistan?</h3>
               <p className="text-gray-600">
-                We offer free shipping on all orders over $50 within the United States. 
-                For orders under $50, a flat rate of $5.99 applies. International shipping 
-                rates vary by destination.
+                We offer free delivery on all orders above Rs. 3,000 within Pakistan.  
+                For orders below this amount, standard delivery charges vary based on location and will be displayed at checkout.
               </p>
             </div>
-            
+
             <div className="bg-white p-6 rounded-lg shadow-sm">
               <h3 className="font-bold mb-2">How can I track my order?</h3>
               <p className="text-gray-600">
-                Once your order ships, you'll receive a confirmation email with tracking information. 
-                You can also track your order by logging into your account on our website.
+                Once your order has been dispatched, you’ll receive an SMS & email notification with your tracking details.  
+                You can also check the status of your order by logging into your account on our website.
               </p>
             </div>
-            
+
             <div className="bg-white p-6 rounded-lg shadow-sm">
               <h3 className="font-bold mb-2">What is your return policy?</h3>
               <p className="text-gray-600">
-                We offer a 30-day return policy on all unused and unopened products. 
-                To initiate a return, please contact our customer service team.
+                We accept returns for unused, unopened skincare products within 15 days of purchase.  
+                If you receive a damaged or incorrect item, please contact our customer support immediately for assistance.
               </p>
             </div>
-            
+
+            <div className="bg-white p-6 rounded-lg shadow-sm">
+              <h3 className="font-bold mb-2">Are your skincare products safe for all skin types?</h3>
+              <p className="text-gray-600">
+                Yes, our skincare formulations are dermatologically tested and suitable for all skin types,  
+                including sensitive skin. If you have any concerns, we recommend doing a patch test before full application.
+              </p>
+            </div>
+
             <div className="bg-white p-6 rounded-lg shadow-sm">
               <h3 className="font-bold mb-2">Are your products cruelty-free?</h3>
               <p className="text-gray-600">
-                Yes, all TommyFX products are 100% cruelty-free. We never test on animals 
-                and don't work with suppliers who do.
+                Absolutely! We are 100% cruelty-free and do not test on animals.  
+                All our ingredients are ethically sourced.
               </p>
             </div>
           </div>
         </div>
       </section>
+
     </div>
   );
 };
