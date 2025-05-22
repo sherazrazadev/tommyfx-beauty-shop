@@ -14,6 +14,7 @@ import Profile from '@/pages/Profile';
 import Categories from '@/pages/Categories';
 import CategoryProducts from '@/pages/CategoryProducts';
 import Wishlist from '@/pages/Wishlist';
+import Newsletter from '@/pages/admin/Newsletter';
 
 // Admin Routes
 import Dashboard from '@/pages/admin/Dashboard';
@@ -57,8 +58,9 @@ function App() {
           <Route path="/admin/orders/:id" element={<OrderDetail />} />
           <Route path="/admin/feedback" element={<Feedback />} />
           <Route path="/admin/customers" element={<Customers />} />
+          <Route path="/admin/newsletter" element={<Newsletter />} />
+
           <Route path="/admin/settings" element={<Settings />} />
-          
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Layout>

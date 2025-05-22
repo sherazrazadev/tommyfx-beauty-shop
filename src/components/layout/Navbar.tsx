@@ -1,21 +1,91 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { ShoppingCart, User, Menu, X, Search } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { useCart } from '@/hooks/useCart';
+import { supabase } from '@/integrations/supabase/client';
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
   const { cart } = useCart();
+  const navigate = useNavigate();
   
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
-  const toggleSearch = () => setIsSearchOpen(!isSearchOpen);
+  const toggleSearch = () => {
+    setIsSearchOpen(!isSearchOpen);
+    if (!isSearchOpen) {
+      setSearchQuery('');
+      setSearchResults([]);
+    }
+  };
   
   // Auto-close menu when navigation link is clicked
   const handleNavClick = () => setIsMenuOpen(false);
 
   const cartItemCount = cart.reduce((total, item) => total + item.quantity, 0);
+
+  // Search functionality
+  const performSearch = async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('id, name, price, image_url, category, description')
+        .or(`name.ilike.%${query}%, description.ilike.%${query}%, category.ilike.%${query}%`)
+        .limit(5);
+
+      if (error) throw error;
+      setSearchResults(data || []);
+    } catch (error) {
+      console.error('Search error:', error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchQuery) {
+        performSearch(searchQuery);
+      } else {
+        setSearchResults([]);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
+  };
+
+  const handleProductClick = (productId: string) => {
+    navigate(`/product/${productId}`);
+    setIsSearchOpen(false);
+    setSearchQuery('');
+    setSearchResults([]);
+  };
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/categories?search=${encodeURIComponent(searchQuery)}`);
+      setIsSearchOpen(false);
+      setSearchQuery('');
+      setSearchResults([]);
+    }
+  };
 
   return (
     <header className="bg-tommyfx-white shadow-sm py-4 sticky top-0 z-50">
@@ -77,19 +147,73 @@ const Navbar = () => {
           </div>
         </div>
 
-        {/* Mobile Search Bar */}
+        {/* Functional Search Bar */}
         {isSearchOpen && (
-          <div className="pt-4 animate-fade-in">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search products..."
-                className="w-full p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-tommyfx-blue"
-              />
-              <button className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                <Search size={20} className="text-gray-400" />
-              </button>
-            </div>
+          <div className="pt-4 animate-fade-in relative">
+            <form onSubmit={handleSearchSubmit}>
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search products by name, category, or description..."
+                  value={searchQuery}
+                  onChange={handleSearchInputChange}
+                  className="w-full p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-tommyfx-blue pr-10"
+                  autoFocus
+                />
+                <button 
+                  type="submit"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 hover:text-tommyfx-blue"
+                >
+                  <Search size={20} className="text-gray-400" />
+                </button>
+              </div>
+            </form>
+
+            {/* Search Results Dropdown */}
+            {(searchResults.length > 0 || isSearching) && (
+              <div className="absolute top-full left-0 right-0 bg-white border border-gray-200 rounded-md shadow-lg mt-1 max-h-96 overflow-y-auto z-50">
+                {isSearching ? (
+                  <div className="p-4 text-center text-gray-500">
+                    Searching...
+                  </div>
+                ) : searchResults.length > 0 ? (
+                  <>
+                    {searchResults.map((product) => (
+                      <div
+                        key={product.id}
+                        onClick={() => handleProductClick(product.id)}
+                        className="flex items-center p-3 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
+                      >
+                        <img
+                          src={product.image_url || 'https://source.unsplash.com/oG8PIWBc3nE'}
+                          alt={product.name}
+                          className="w-12 h-12 object-cover rounded mr-3"
+                        />
+                        <div className="flex-1">
+                          <h4 className="font-medium text-sm">{product.name}</h4>
+                          <p className="text-xs text-gray-500">{product.category}</p>
+                          <p className="text-sm font-semibold text-tommyfx-blue">
+                            Rs. {product.price}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                    {searchQuery && (
+                      <div 
+                        onClick={() => handleSearchSubmit(new Event('submit') as any)}
+                        className="p-3 text-center text-tommyfx-blue hover:bg-gray-50 cursor-pointer border-t"
+                      >
+                        View all results for "{searchQuery}"
+                      </div>
+                    )}
+                  </>
+                ) : searchQuery ? (
+                  <div className="p-4 text-center text-gray-500">
+                    No products found for "{searchQuery}"
+                  </div>
+                ) : null}
+              </div>
+            )}
           </div>
         )}
 

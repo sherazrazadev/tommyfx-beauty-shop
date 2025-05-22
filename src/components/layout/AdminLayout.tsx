@@ -17,6 +17,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/components/ui/use-toast';
+import { Mail } from 'lucide-react';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -79,11 +80,17 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
       icon: Users,
       current: location.pathname.includes('/admin/customers')
     },
+    // {
+    //   name: 'Analytics',
+    //   href: '/admin/analytics',
+    //   icon: BarChart,
+    //   current: location.pathname === '/admin/analytics'
+    // },
     {
-      name: 'Analytics',
-      href: '/admin/analytics',
-      icon: BarChart,
-      current: location.pathname === '/admin/analytics'
+      name: 'Newsletter',
+      href: '/admin/newsletter',
+      icon: Mail,
+      current: location.pathname === '/admin/newsletter'
     },
     {
       name: 'Settings',

@@ -75,33 +75,35 @@ const Categories: React.FC = () => {
           </p>
         </div>
 
-        {/* Mobile Responsive Tabs - Fixed */}
-        <div className="mb-8 overflow-x-auto scrollbar-hide">
+        {/* Mobile Responsive Tabs - Fixed Left Cutoff */}
+        <div className="mb-8">
           {loadingCats ? (
             <div className="flex justify-center">
               <Skeleton className="h-10 w-64 rounded-full" />
             </div>
           ) : (
-            <div className="flex justify-center pb-2">
-              <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className="bg-gray-100 rounded-full p-1 inline-flex min-w-max">
-                  <TabsTrigger 
-                    value="All Products" 
-                    className="rounded-full px-3 sm:px-4 text-sm whitespace-nowrap shrink-0"
-                  >
-                    All Products
-                  </TabsTrigger>
-                  {categories.map(cat => (
+            <div className="w-full overflow-x-auto scrollbar-hide px-4">
+              <div className="flex justify-start md:justify-center pb-2">
+                <Tabs value={activeTab} onValueChange={setActiveTab}>
+                  <TabsList className="bg-gray-100 rounded-full p-1 inline-flex">
                     <TabsTrigger 
-                      key={cat} 
-                      value={cat} 
-                      className="rounded-full px-3 sm:px-4 text-sm whitespace-nowrap shrink-0"
+                      value="All Products" 
+                      className="rounded-full px-2 sm:px-3 text-xs sm:text-sm whitespace-nowrap shrink-0"
                     >
-                      {cat}
+                      All
                     </TabsTrigger>
-                  ))}
-                </TabsList>
-              </Tabs>
+                    {categories.map(cat => (
+                      <TabsTrigger 
+                        key={cat} 
+                        value={cat} 
+                        className="rounded-full px-2 sm:px-3 text-xs sm:text-sm whitespace-nowrap shrink-0"
+                      >
+                        {cat}
+                      </TabsTrigger>
+                    ))}
+                  </TabsList>
+                </Tabs>
+              </div>
             </div>
           )}
         </div>

@@ -1,10 +1,75 @@
-
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, Phone, MapPin, Instagram, Facebook, Twitter } from 'lucide-react';
 import { Button } from "@/components/ui/button";
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/components/ui/use-toast';
 
 const Footer = () => {
+  const [email, setEmail] = useState('');
+  const [isSubscribing, setIsSubscribing] = useState(false);
+
+  const handleNewsletterSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!email.trim()) {
+      toast({
+        title: "Email Required",
+        description: "Please enter your email address",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      toast({
+        title: "Invalid Email",
+        description: "Please enter a valid email address",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsSubscribing(true);
+
+    try {
+      // Use type assertion to bypass TypeScript errors
+      const { error } = await (supabase as any)
+        .from('newsletter_subscribers')
+        .insert([{ email: email.trim().toLowerCase() }]);
+
+      if (error) {
+        // Check if email already exists
+        if (error.code === '23505') {
+          toast({
+            title: "Already Subscribed",
+            description: "This email is already subscribed to our newsletter",
+            variant: "destructive"
+          });
+        } else {
+          throw error;
+        }
+      } else {
+        toast({
+          title: "Successfully Subscribed! 🎉",
+          description: "Thank you for subscribing to our newsletter",
+        });
+        setEmail('');
+      }
+    } catch (error: any) {
+      console.error('Newsletter subscription error:', error);
+      toast({
+        title: "Subscription Failed",
+        description: "Something went wrong. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubscribing(false);
+    }
+  };
+
   return (
     <footer className="bg-tommyfx-black text-white pt-16 pb-8">
       <div className="container-custom">
@@ -14,16 +79,24 @@ const Footer = () => {
           <p className="text-gray-300 mb-6 max-w-lg mx-auto">
             Subscribe to our newsletter for exclusive offers, beauty tips, and new product releases.
           </p>
-          <div className="flex flex-col sm:flex-row max-w-md mx-auto gap-3">
+          <form onSubmit={handleNewsletterSubmit} className="flex flex-col sm:flex-row max-w-md mx-auto gap-3">
             <input
               type="email"
               placeholder="Your email address"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               className="flex-grow p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-tommyfx-blue text-tommyfx-black"
+              disabled={isSubscribing}
+              required
             />
-            <Button className="bg-tommyfx-blue hover:bg-blue-600 transition-colors">
-              Subscribe
+            <Button 
+              type="submit"
+              disabled={isSubscribing}
+              className="bg-tommyfx-blue hover:bg-blue-600 transition-colors min-w-[100px]"
+            >
+              {isSubscribing ? 'Subscribing...' : 'Subscribe'}
             </Button>
-          </div>
+          </form>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
