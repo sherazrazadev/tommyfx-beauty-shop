@@ -1,27 +1,41 @@
-// api/send-email.ts (Vercel serverless function)
-import { NextApiRequest, NextApiResponse } from 'next';
+// /api/send-email.js (Vercel Serverless Function)
 import sgMail from '@sendgrid/mail';
 
-// Initialize SendGrid
-sgMail.setApiKey(process.env.SENDGRID_API_KEY!);
+export default async function handler(req, res) {
+  // Enable CORS
+  res.setHeader('Access-Control-Allow-Credentials', true);
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader('Access-Control-Allow-Headers', 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version');
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
+    // Initialize SendGrid
+    if (!process.env.SENDGRID_API_KEY) {
+      throw new Error('SENDGRID_API_KEY is not configured');
+    }
+    
+    sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
     const { order, customer, cartItems } = req.body;
 
     if (!customer?.email || !order?.id) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    const orderTotal = cartItems.reduce((sum: number, item: any) => 
+    const orderTotal = cartItems.reduce((sum, item) => 
       sum + (item.price * item.quantity), 0
     );
 
-    const itemsHtml = cartItems.map((item: any) => `
+    const itemsHtml = cartItems.map(item => `
       <tr>
         <td style="padding: 10px; border-bottom: 1px solid #eee;">
           ${item.name}
@@ -110,16 +124,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     await sgMail.send(msg);
 
-    res.status(200).json({ 
+    return res.status(200).json({ 
       success: true, 
       message: 'Order confirmation email sent successfully' 
     });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('Email sending error:', error);
-    res.status(500).json({ 
+    return res.status(500).json({ 
       error: 'Failed to send email',
-      details: error.message 
+      details: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 }
