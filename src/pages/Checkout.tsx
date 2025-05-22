@@ -9,6 +9,23 @@ import { Label } from '@/components/ui/label';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/utils';
 
+// TypeScript declaration for EmailJS
+declare global {
+  interface Window {
+    emailjs: {
+      init: (publicKey: string) => void;
+      send: (serviceId: string, templateId: string, params: any) => Promise<any>;
+    };
+  }
+}
+
+// EmailJS configuration (add to your .env)
+const EMAILJS_CONFIG = {
+  SERVICE_ID: 'service_tommyfx', // Your EmailJS service ID
+  TEMPLATE_ID: 'template_order', // Your EmailJS template ID  
+  PUBLIC_KEY: 'your_public_key'  // Your EmailJS public key
+};
+
 const Checkout = () => {
   const { cart, getCartTotal, clearCart, shipping } = useCart();
   const navigate = useNavigate();
@@ -18,8 +35,8 @@ const Checkout = () => {
     phone: '',
     address: '',
     city: '',
-    state: '',
-    zip: '',
+    state: '', // Optional
+    zip: '',   // Optional
     country: 'Pakistan',
   });
   const [processing, setProcessing] = useState(false);
@@ -31,7 +48,7 @@ const Checkout = () => {
   };
 
   const validateForm = () => {
-    const required = ['name', 'email', 'phone', 'address', 'city', 'state', 'zip'];
+    const required = ['name', 'email', 'phone', 'address', 'city'];
     const missing = required.filter(field => !formData[field as keyof typeof formData]);
     
     if (missing.length > 0) {
@@ -43,8 +60,7 @@ const Checkout = () => {
       return false;
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       toast({
         title: "Invalid Email",
         description: "Please enter a valid email address",
@@ -56,32 +72,66 @@ const Checkout = () => {
     return true;
   };
 
-  const sendOrderConfirmationEmail = async (orderData: any) => {
+  // Client-side email using EmailJS (more reliable for free plans)
+  const sendOrderEmail = async (orderData: any) => {
     try {
-      const response = await fetch('/api/send-email', {
+      // Load EmailJS if not already loaded
+      if (!window.emailjs) {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js';
+        document.head.appendChild(script);
+        await new Promise<void>((resolve) => {
+          script.onload = () => resolve();
+        });
+        window.emailjs.init(EMAILJS_CONFIG.PUBLIC_KEY);
+      }
+
+      const emailParams = {
+        to_email: formData.email,
+        to_name: formData.name,
+        order_id: orderData.id.substring(0, 8),
+        order_date: new Date().toLocaleDateString(),
+        customer_name: formData.name,
+        customer_phone: formData.phone,
+        customer_address: `${formData.address}, ${formData.city}${formData.state ? `, ${formData.state}` : ''}${formData.zip ? ` ${formData.zip}` : ''}, ${formData.country}`,
+        order_items: cart.map(item => 
+          `${item.name} (Qty: ${item.quantity}) - Rs. ${(item.price * item.quantity).toFixed(2)}`
+        ).join('\n'),
+        order_total: total.toFixed(2),
+        company_email: 'tommyfx.pk@gmail.com',
+        company_phone: '+92 (306) 714-5010'
+      };
+
+      await window.emailjs.send(
+        EMAILJS_CONFIG.SERVICE_ID,
+        EMAILJS_CONFIG.TEMPLATE_ID,
+        emailParams
+      );
+
+      console.log('Email sent via EmailJS');
+    } catch (error) {
+      console.error('Email failed:', error);
+      // Don't block checkout
+    }
+  };
+
+  // Simple webhook alternative (no email dependency)
+  const sendOrderWebhook = async (orderData: any) => {
+    try {
+      // Simple webhook to notify admin (can use Zapier, Make.com, or Discord webhook)
+      await fetch('https://hooks.zapier.com/hooks/catch/your_webhook_id/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          order: orderData,
+          order_id: orderData.id,
           customer: formData,
-          cartItems: cart
-        }),
+          items: cart,
+          total: total,
+          timestamp: new Date().toISOString()
+        })
       });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.details || 'Failed to send email');
-      }
-
-      console.log('Order confirmation email sent successfully');
     } catch (error) {
-      console.error('Email sending failed:', error);
-      // Don't block checkout if email fails
-      toast({
-        title: "Order Placed",
-        description: "Order placed successfully! Email confirmation may be delayed.",
-        variant: "default"
-      });
+      console.error('Webhook failed:', error);
     }
   };
 
@@ -106,14 +156,14 @@ const Checkout = () => {
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
         .insert({
-          user_id: null, // Allow guest orders
+          user_id: null,
           total_amount: total,
           status: 'pending',
           payment_method: 'COD',
           shipping_address: formData.address,
           shipping_city: formData.city,
-          shipping_state: formData.state,
-          shipping_zip: formData.zip,
+          shipping_state: formData.state || null,
+          shipping_zip: formData.zip || null,
           shipping_country: formData.country,
           phone: formData.phone,
         })
@@ -136,23 +186,31 @@ const Checkout = () => {
 
       if (itemsError) throw itemsError;
 
-      // Send confirmation email
-      await sendOrderConfirmationEmail(orderData);
+      // Send notifications (non-blocking)
+      Promise.all([
+        sendOrderEmail(orderData),
+        sendOrderWebhook(orderData)
+      ]).catch(console.error);
 
       // Success
       clearCart();
+      
       toast({
-        title: "Order Placed Successfully!",
-        description: `Order #${orderData.id.substring(0, 8)} has been confirmed. Check your email for details.`,
+        title: "Order Placed Successfully! 🎉",
+        description: `Order #${orderData.id.substring(0, 8)} confirmed. Check your email for details.`,
+        duration: 2000 // 2 seconds
       });
 
-      navigate('/');
+      // Redirect after toast
+      setTimeout(() => navigate('/'), 2100);
+      
     } catch (error: any) {
       console.error("Checkout failed:", error);
       toast({
         title: "Checkout Failed",
         description: error.message || "Something went wrong. Please try again.",
         variant: "destructive",
+        duration: 2000
       });
     } finally {
       setProcessing(false);
@@ -202,7 +260,7 @@ const Checkout = () => {
           </CardContent>
         </Card>
 
-        {/* Customer Information Form */}
+        {/* Customer Form */}
         <Card>
           <CardHeader>
             <CardTitle>Customer Information</CardTitle>
@@ -269,23 +327,21 @@ const Checkout = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="state">State *</Label>
+                  <Label htmlFor="state">State (Optional)</Label>
                   <Input
                     id="state"
                     name="state"
                     value={formData.state}
                     onChange={handleChange}
-                    required
                   />
                 </div>
                 <div>
-                  <Label htmlFor="zip">ZIP Code *</Label>
+                  <Label htmlFor="zip">ZIP Code (Optional)</Label>
                   <Input
                     id="zip"
                     name="zip"
                     value={formData.zip}
                     onChange={handleChange}
-                    required
                   />
                 </div>
               </div>
