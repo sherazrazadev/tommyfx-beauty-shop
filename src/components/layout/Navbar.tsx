@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, User, Menu, X, Search } from 'lucide-react';
+import { ShoppingCart, User, Menu, X, Search, Heart } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { useCart } from '@/hooks/useCart';
 import { supabase } from '@/integrations/supabase/client';
+import { useWishlist } from '@/components/wishlist/useWishlist'; // Add this import
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -13,7 +14,8 @@ const Navbar = () => {
   const [isSearching, setIsSearching] = useState(false);
   const { cart } = useCart();
   const navigate = useNavigate();
-  
+  const { wishlist } = useWishlist(); // Add this line
+
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
   const toggleSearch = () => {
     setIsSearchOpen(!isSearchOpen);
@@ -24,8 +26,11 @@ const Navbar = () => {
   };
   
   // Auto-close menu when navigation link is clicked
-  const handleNavClick = () => setIsMenuOpen(false);
-
+  // const handleNavClick = () => setIsMenuOpen(false);
+  // Add this function after the existing functions
+  const handleLinkClick = () => {
+    setIsMenuOpen(false); // Close menu when any link is clicked
+  };
   const cartItemCount = cart.reduce((total, item) => total + item.quantity, 0);
 
   // Search functionality
@@ -93,7 +98,7 @@ const Navbar = () => {
         <div className="flex items-center justify-between">
           {/* Logo */}
           <div className="flex-shrink-0">
-            <Link to="/" className="flex items-center" onClick={handleNavClick}>
+            <Link to="/" className="flex items-center" onClick={handleLinkClick}>
               <span className="font-serif font-bold text-2xl text-tommyfx-black">
                 Tommy<span className="text-tommyfx-blue">FX</span>
               </span>
@@ -102,10 +107,37 @@ const Navbar = () => {
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
-            <Link to="/" className="font-medium hover:text-tommyfx-blue transition-colors">Home</Link>
-            <Link to="/categories" className="font-medium hover:text-tommyfx-blue transition-colors">Shop</Link>
-            <Link to="/about" className="font-medium hover:text-tommyfx-blue transition-colors">About</Link>
-            <Link to="/contact" className="font-medium hover:text-tommyfx-blue transition-colors">Contact</Link>
+            <Link to="/" className="font-medium hover:text-tommyfx-blue transition-colors" onClick={handleLinkClick}>Home</Link>
+            <Link to="/categories" className="font-medium hover:text-tommyfx-blue transition-colors" onClick={handleLinkClick}>Shop</Link>
+            <Link to="/about" className="font-medium hover:text-tommyfx-blue transition-colors" onClick={handleLinkClick}>About</Link>
+            <Link to="/contact" className="font-medium hover:text-tommyfx-blue transition-colors" onClick={handleLinkClick} >Contact</Link>
+            {/* Support Dropdown */}
+            <div className="relative group">
+              <button className="font-medium hover:text-tommyfx-blue transition-colors flex items-center">
+                Support
+                <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              
+              {/* Dropdown Menu */}
+              <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                <div className="py-2">
+                  <Link to="/support/faq" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-tommyfx-blue" onClick={handleLinkClick}>
+                    FAQs
+                  </Link>
+                  <Link to="/support/track-order" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-tommyfx-blue" onClick={handleLinkClick}>
+                    Track Order
+                  </Link>
+                  <Link to="/support/privacy-policy" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-tommyfx-blue" onClick={handleLinkClick}>
+                    Privacy Policy
+                  </Link>
+                  <Link to="/support/terms-conditions" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-tommyfx-blue" onClick={handleLinkClick}>
+                    Terms & Conditions
+                  </Link>
+                </div>
+              </div>
+            </div>
           </nav>
 
           {/* Right Icons */}
@@ -125,7 +157,19 @@ const Navbar = () => {
             >
               <User size={20} />
             </Link>
-            
+            {/* Wishlist Icon */}
+            <Link 
+              to="/wishlist" 
+              className="p-2 hover:text-tommyfx-blue transition-colors relative"
+              aria-label="Wishlist"
+            >
+              <Heart size={20} />
+              {wishlist.length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  {wishlist.length}
+                </span>
+              )}
+            </Link>
             <Link 
               to="/cart" 
               className="p-2 hover:text-tommyfx-blue transition-colors relative"
@@ -221,41 +265,21 @@ const Navbar = () => {
         {isMenuOpen && (
           <nav className="md:hidden pt-4 animate-fade-in">
             <div className="flex flex-col space-y-4">
-              <Link 
-                to="/" 
-                className="font-medium p-2 hover:bg-gray-50 rounded-md"
-                onClick={handleNavClick}
-              >
-                Home
-              </Link>
-              <Link 
-                to="/categories" 
-                className="font-medium p-2 hover:bg-gray-50 rounded-md"
-                onClick={handleNavClick}
-              >
-                Shop
-              </Link>
-              <Link 
-                to="/about" 
-                className="font-medium p-2 hover:bg-gray-50 rounded-md"
-                onClick={handleNavClick}
-              >
-                About
-              </Link>
-              <Link 
-                to="/contact" 
-                className="font-medium p-2 hover:bg-gray-50 rounded-md"
-                onClick={handleNavClick}
-              >
-                Contact
-              </Link>
-              <Link 
-                to="/profile" 
-                className="font-medium p-2 hover:bg-gray-50 rounded-md"
-                onClick={handleNavClick}
-              >
-                My Account
-              </Link>
+              <Link to="/" className="font-medium p-2 hover:bg-gray-50 rounded-md">Home</Link>
+              <Link to="/categories" className="font-medium p-2 hover:bg-gray-50 rounded-md">Shop</Link>
+              <Link to="/about" className="font-medium p-2 hover:bg-gray-50 rounded-md">About</Link>
+              <Link to="/contact" className="font-medium p-2 hover:bg-gray-50 rounded-md">Contact</Link>
+              
+              {/* Mobile Support Links */}
+              <div className="border-t pt-2 mt-2">
+                <p className="text-sm font-medium text-gray-500 px-2 mb-2">Support</p>
+                <Link to="/support/faq" className="font-medium p-2 hover:bg-gray-50 rounded-md block pl-4">FAQs</Link>
+                <Link to="/support/track-order" className="font-medium p-2 hover:bg-gray-50 rounded-md block pl-4">Track Order</Link>
+                <Link to="/support/privacy-policy" className="font-medium p-2 hover:bg-gray-50 rounded-md block pl-4">Privacy Policy</Link>
+                <Link to="/support/terms-conditions" className="font-medium p-2 hover:bg-gray-50 rounded-md block pl-4">Terms & Conditions</Link>
+              </div>
+              
+              <Link to="/profile" className="font-medium p-2 hover:bg-gray-50 rounded-md">My Account</Link>
             </div>
           </nav>
         )}

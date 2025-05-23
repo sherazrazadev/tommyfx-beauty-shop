@@ -47,31 +47,6 @@ const Checkout = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const validateForm = () => {
-    const required = ['name', 'email', 'phone', 'address', 'city'];
-    const missing = required.filter(field => !formData[field as keyof typeof formData]);
-    
-    if (missing.length > 0) {
-      toast({
-        title: "Missing Information",
-        description: `Please fill in: ${missing.join(', ')}`,
-        variant: "destructive"
-      });
-      return false;
-    }
-
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      toast({
-        title: "Invalid Email",
-        description: "Please enter a valid email address",
-        variant: "destructive"
-      });
-      return false;
-    }
-
-    return true;
-  };
-
   // Fixed EmailJS implementation
   const sendOrderEmailDirect = async (orderData: any) => {
 
@@ -143,6 +118,99 @@ const Checkout = () => {
     // }
   };
 
+
+// Validate stock before checkout
+  const validateStock = async () => {
+    try {
+      const stockChecks = await Promise.all(
+        cart.map(async (item) => {
+          const { data, error } = await supabase
+            .from('products')
+            .select('stock, name')
+            .eq('id', item.id)
+            .single();
+          
+          if (error) throw error;
+          
+          return {
+            ...item,
+            availableStock: data.stock,
+            productName: data.name
+          };
+        })
+      );
+
+      const insufficientStock = stockChecks.filter(
+        item => item.quantity > item.availableStock
+      );
+
+      if (insufficientStock.length > 0) {
+        const errorMsg = insufficientStock
+          .map(item => `${item.productName}: Need ${item.quantity}, only ${item.availableStock} available`)
+          .join(', ');
+        
+        toast({
+          title: "Insufficient Stock",
+          description: errorMsg,
+          variant: "destructive"
+        });
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Stock validation error:', error);
+      toast({
+        title: "Stock Check Failed",
+        description: "Unable to verify product availability",
+        variant: "destructive"
+      });
+      return false;
+    }
+  };
+
+  // In Checkout.tsx - replace the updateProductStock function
+  const updateProductStock = async (cartItems: any[]) => {
+    try {
+      // Update each product's stock individually
+      for (const item of cartItems) {
+        // First get current stock
+        const { data: currentProduct, error: fetchError } = await supabase
+          .from('products')
+          .select('stock')
+          .eq('id', item.id)
+          .single();
+        
+        if (fetchError) {
+          console.error(`Error fetching stock for ${item.id}:`, fetchError);
+          continue;
+        }
+        
+        const currentStock = currentProduct?.stock || 0;
+        const newStock = Math.max(0, currentStock - item.quantity);
+        
+        console.log(`Updating stock for ${item.name}: ${currentStock} -> ${newStock}`);
+        
+        // Update the stock
+        const { error: updateError } = await supabase
+          .from('products')
+          .update({ stock: newStock })
+          .eq('id', item.id);
+        
+        if (updateError) {
+          console.error(`Error updating stock for ${item.id}:`, updateError);
+        } else {
+          console.log(`✅ Stock updated for ${item.name}: ${newStock}`);
+        }
+      }
+      
+      console.log('✅ All stock updates completed');
+    } catch (error) {
+      console.error('❌ Stock update failed:', error);
+    }
+  };
+
+  // Updated handleSubmit function
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -160,7 +228,14 @@ const Checkout = () => {
     setProcessing(true);
 
     try {
-      // 1. Create order in database
+      // 1. Validate stock availability
+      const stockValid = await validateStock();
+      if (!stockValid) {
+        setProcessing(false);
+        return;
+      }
+
+      // 2. Create order in database
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
         .insert({
@@ -180,9 +255,10 @@ const Checkout = () => {
 
       if (orderError) throw orderError;
 
-      // 2. Create order items
+      // 3. Create order items
       const orderItems = cart.map(item => ({
         order_id: orderData.id,
+        product_id: item.id, // Add product_id for stock tracking
         product_name: item.name,
         quantity: item.quantity,
         price: item.price,
@@ -194,19 +270,23 @@ const Checkout = () => {
 
       if (itemsError) throw itemsError;
 
-      // 3. Send confirmation email (non-blocking)
+      // 4. Update product stock
+      await updateProductStock(cart);
+
+      // 5. Send confirmation email (non-blocking)
       const emailSent = await sendOrderEmailDirect(orderData);
 
-      // 4. Clear cart and show success
-      clearCart();
+      // 6. Clear cart and show success
+      window.localStorage.setItem('stockUpdated', Date.now().toString());
       
       toast({
         title: "Order Placed Successfully! 🎉",
         description: `Order #${orderData.id.substring(0, 8)} confirmed.${emailSent ? ' Check your email for details.' : ' We\'ll contact you at ' + formData.phone + ' soon.'}`,
         duration: 2000
       });
+      clearCart();
 
-      // 5. Redirect after toast
+      // 7. Redirect after toast
       setTimeout(() => navigate('/'), 2100);
       
     } catch (error: any) {
@@ -220,6 +300,32 @@ const Checkout = () => {
     } finally {
       setProcessing(false);
     }
+  };
+
+  // Add this validation function if not exists
+  const validateForm = () => {
+    const required = ['name', 'email', 'phone', 'address', 'city'];
+    const missing = required.filter(field => !formData[field as keyof typeof formData]);
+    
+    if (missing.length > 0) {
+      toast({
+        title: "Missing Information",
+        description: `Please fill in: ${missing.join(', ')}`,
+        variant: "destructive"
+      });
+      return false;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      toast({
+        title: "Invalid Email",
+        description: "Please enter a valid email address",
+        variant: "destructive"
+      });
+      return false;
+    }
+
+    return true;
   };
 
   return (

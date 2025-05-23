@@ -11,12 +11,13 @@ const Home = () => {
   const [featuredProducts, setFeaturedProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // In Home.tsx - update the fetchFeaturedProducts function
   useEffect(() => {
     const fetchFeaturedProducts = async () => {
       try {
         const { data, error } = await supabase
           .from('products')
-          .select('*')
+          .select('*') // Select all fields
           .order('created_at', { ascending: false })
           .limit(4);
           
@@ -93,6 +94,8 @@ const Home = () => {
                     category={product.category}
                     originalPrice={product.original_price}
                     discountPercent={product.discount_percent}
+                    stock={product.stock || 0} // Add this line
+
                   />
                 ))
               ) : (

@@ -28,8 +28,6 @@ export interface Product {
   discount_percent?: number;
   original_price?: number;
   additional_images?: string[];
-  
-  // New fields for product details
   ingredients?: string;
   how_to_use?: string;
   benefits?: string[];

@@ -10,7 +10,9 @@ import {
   ShoppingCart,
   Truck,
   RefreshCw,
-  Check
+  Check,
+  Clock,
+  Package
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ProductCard from '@/components/ui/ProductCard';
@@ -22,9 +24,8 @@ import { useAuth } from '@/hooks/useAuth';
 import ReviewDialog from '@/components/reviews/ReviewDialog';
 import { useWishlist } from '@/components/wishlist/useWishlist'; 
 import SocialShareButtons from '@/components/sharing/SocialShareButtons';
-import { Product } from '@/types/index'; // Import the Product type
+import { Product } from '@/types/index';
 import { formatCurrency } from '@/lib/utils';
-
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,7 +36,97 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-// Define a type for the review/feedback data
+
+// Countdown Timer Component
+const CountdownTimer: React.FC<{ initialMinutes?: number }> = ({ initialMinutes = 29 }) => {
+  const [timeLeft, setTimeLeft] = useState({
+    hours: Math.floor(initialMinutes / 60),
+    minutes: initialMinutes % 60,
+    seconds: Math.floor(Math.random() * 60)
+  });
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeLeft(prev => {
+        let { hours, minutes, seconds } = prev;
+        
+        if (seconds > 0) {
+          seconds--;
+        } else if (minutes > 0) {
+          minutes--;
+          seconds = 59;
+        } else if (hours > 0) {
+          hours--;
+          minutes = 59;
+          seconds = 59;
+        } else {
+          // Reset timer when it reaches 0
+          return {
+            hours: Math.floor(initialMinutes / 60),
+            minutes: initialMinutes % 60,
+            seconds: Math.floor(Math.random() * 60)
+          };
+        }
+        
+        return { hours, minutes, seconds };
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [initialMinutes]);
+
+  return (
+    <div className="flex items-center gap-1 text-white font-mono text-sm">
+      <Clock size={14} />
+      {String(timeLeft.hours).padStart(2, '0')}:
+      {String(timeLeft.minutes).padStart(2, '0')}:
+      {String(timeLeft.seconds).padStart(2, '0')}
+    </div>
+  );
+};
+
+// Discount Highlight Bar Component
+const DiscountHighlight: React.FC<{ discountPercent: number }> = ({ discountPercent }) => {
+  return (
+    <div className="bg-gradient-to-r from-red-500 to-orange-500 rounded-lg p-3 mb-6 flex items-center justify-between text-white shadow-lg">
+      <div className="flex items-center gap-2">
+        <div className="bg-white/20 rounded-full px-3 py-1">
+          <span className="font-bold text-lg">{Math.round(discountPercent)}% OFF</span>
+        </div>
+        <span className="font-medium">Limited Time Offer!</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="text-sm opacity-90">Offer ends in:</span>
+        <CountdownTimer />
+      </div>
+    </div>
+  );
+};
+
+// Stock Display Component
+const StockDisplay: React.FC<{ stock: number }> = ({ stock }) => {
+  const getStockColor = (stock: number) => {
+    if (stock === 0) return 'text-red-600 bg-red-50';
+    if (stock <= 5) return 'text-orange-600 bg-orange-50';
+    if (stock <= 10) return 'text-yellow-600 bg-yellow-50';
+    return 'text-green-600 bg-green-50';
+  };
+
+  const getStockText = (stock: number) => {
+    if (stock === 0) return 'Out of Stock';
+    if (stock <= 5) return `Only ${stock} left!`;
+    if (stock <= 10) return `${stock} in stock`;
+    return `${stock} available`;
+  };
+
+  return (
+    <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${getStockColor(stock)}`}>
+      <Package size={14} />
+      {getStockText(stock)}
+    </div>
+  );
+};
+
 interface Review {
   id: string;
   name: string;
@@ -44,10 +135,6 @@ interface Review {
   comment: string;
 }
 
-// Define an extended product type that includes images for UI
-interface ProductWithImages extends Product {
-  images: string[];
-}
 const ProductDetail = () => {
   const { id } = useParams<{ id: string }>();
   const [quantity, setQuantity] = useState(1);
@@ -71,6 +158,7 @@ const ProductDetail = () => {
           .select('*')
           .eq('id', id)
           .single();
+        
         if (error || !data) throw error || new Error('Product not found');
 
         const mainImage = data.image_url || 'https://source.unsplash.com/oG8PIWBc3nE';
@@ -90,40 +178,77 @@ const ProductDetail = () => {
     if (id) fetchProduct();
   }, [id]);
 
-  
-  const fetchRelated = async (category: string, currentId: string) => {
-  try {
-    // First, try same-category products
-    let { data, error } = await supabase
-      .from('products')
-      .select('*')
-      .eq('category', category)
-      .neq('id', currentId)
-      .limit(4);
-
-    if (error) throw error;
-
-    // If none found, fall back to any 4 other products
-    if (!data || data.length === 0) {
-      const fallback = await supabase
+    // In ProductDetail.tsx - add this function and call it in useEffect
+  const refreshProductData = async () => {
+    if (!id) return;
+    
+    try {
+      const { data, error } = await supabase
         .from('products')
-        .select('*')
+        .select('stock')
+        .eq('id', id)
+        .single();
+      
+      if (!error && data && product) {
+        setProduct(prev => ({ ...prev, stock: data.stock }));
+      }
+    } catch (error) {
+      console.error('Error refreshing product data:', error);
+    }
+  };
+  // Add this to the existing useEffect or create a new one
+  useEffect(() => {
+    // Refresh stock when component mounts
+    const interval = setInterval(refreshProductData, 5000); // Refresh every 5 seconds
+    return () => clearInterval(interval);
+  }, [id, product]);
+  
+  // In ProductDetail.tsx - add this useEffect
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const stockUpdated = localStorage.getItem('stockUpdated');
+      if (stockUpdated) {
+        refreshProductData();
+        localStorage.removeItem('stockUpdated');
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    // Also check on mount
+    handleStorageChange();
+
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+  // In ProductDetail.tsx - update fetchRelated function
+  const fetchRelated = async (category: string, currentId: string) => {
+    try {
+      let { data, error } = await supabase
+        .from('products')
+        .select('*') // Select all fields to match Product type
+        .eq('category', category)
         .neq('id', currentId)
         .limit(4);
 
-      if (fallback.error) throw fallback.error;
-      data = fallback.data;
-    }
+      if (error) throw error;
 
-    setRelatedProducts(data || []);
-  } catch (err) {
-    console.error('Error fetching related products:', err);
-  }
+      if (!data || data.length === 0) {
+        const fallback = await supabase
+          .from('products')
+          .select('*') // Select all fields
+          .neq('id', currentId)
+          .limit(4);
+        if (fallback.error) throw fallback.error;
+        data = fallback.data;
+      }
+
+      setRelatedProducts(data || []);
+    } catch (err) {
+      console.error('Error fetching related products:', err);
+    }
   };
 
   const fetchReviews = async (productId: string) => {
     try {
-      // Get approved feedback for this product
       const { data: feedbackData, error: feedbackError } = await supabase
         .from('feedback')
         .select('*')
@@ -133,10 +258,7 @@ const ProductDetail = () => {
         
       if (feedbackError) throw feedbackError;
       
-      console.log("Fetched reviews for product:", feedbackData);
-      
       if (feedbackData && feedbackData.length > 0) {
-        // Get user profiles for these reviews
         const userIds = feedbackData
           .map(item => item.user_id)
           .filter((id): id is string => id !== null);
@@ -149,9 +271,7 @@ const ProductDetail = () => {
             .select('id, full_name')
             .in('id', userIds);
             
-          if (profilesError) {
-            console.error('Error fetching profiles for reviews:', profilesError);
-          } else if (profilesData) {
+          if (!profilesError && profilesData) {
             userProfiles = profilesData.reduce((acc: Record<string, any>, profile) => {
               acc[profile.id] = profile;
               return acc;
@@ -159,7 +279,6 @@ const ProductDetail = () => {
           }
         }
         
-        // Format the reviews
         const formattedReviews = feedbackData.map(feedback => {
           const profile = userProfiles[feedback.user_id] || {};
           return {
@@ -172,9 +291,7 @@ const ProductDetail = () => {
         });
         
         setReviews(formattedReviews);
-        console.log("Formatted reviews:", formattedReviews);
       } else {
-        // If no reviews, set an empty array
         setReviews([]);
       }
     } catch (error) {
@@ -182,24 +299,54 @@ const ProductDetail = () => {
     }
   };
 
-  const incrementQuantity = () => setQuantity(prev => prev + 1);
+  const incrementQuantity = () => {
+    if (quantity < product?.stock) {
+      setQuantity(prev => prev + 1);
+    } else {
+      toast({
+        title: "Stock Limit Reached",
+        description: `Only ${product?.stock} items available`,
+        variant: "destructive"
+      });
+    }
+  };
+
   const decrementQuantity = () => setQuantity(prev => (prev > 1 ? prev - 1 : 1));
 
   const handleAddToCart = () => {
-    if (product) {
-      addToCart({
-        id: product.id,
-        name: product.name,
-        price: product.discount_price ? product.discount_price : product.price,
-        image: product.image_url,
-        quantity
-      });
+    if (!product) return;
+    
+    if (product.stock === 0) {
       toast({
-        title: "Added to cart",
-        description: `${quantity} x ${product.name} added to your cart`,
-        duration: 3000 // Show toast for 3 seconds
+        title: "Out of Stock",
+        description: "This product is currently unavailable",
+        variant: "destructive"
       });
+      return;
     }
+
+    if (quantity > product.stock) {
+      toast({
+        title: "Insufficient Stock",
+        description: `Only ${product.stock} items available`,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    addToCart({
+      id: product.id,
+      name: product.name,
+      price: product.discount_percent ? product.price : product.price,
+      image: product.image_url,
+      quantity
+    });
+    
+    toast({
+      title: "Added to cart",
+      description: `${quantity} x ${product.name} added to your cart`,
+      duration: 3000
+    });
   };
   
   const handleOpenReviewDialog = () => {
@@ -227,7 +374,7 @@ const ProductDetail = () => {
       addToWishlist({
         id: product.id,
         name: product.name,
-        price: product.discount_price ? product.discount_price : product.price,
+        price: product.discount_percent ? product.price : product.price,
         image: product.image_url || product.images[0]
       });
       toast({
@@ -238,7 +385,6 @@ const ProductDetail = () => {
   };
 
   const handleReviewSubmitted = async () => {
-    // After a review is submitted, fetch the reviews again
     if (id) {
       toast({
         title: "Review submitted",
@@ -249,7 +395,6 @@ const ProductDetail = () => {
     }
   };
 
-  // Show loading state
   if (loading) {
     return (
       <div className="container-custom py-12">
@@ -260,7 +405,6 @@ const ProductDetail = () => {
     );
   }
   
-  // Show message if product not found
   if (!product) {
     return (
       <div className="container-custom py-12">
@@ -275,17 +419,11 @@ const ProductDetail = () => {
     );
   }
 
-  // Calculate average rating
   const averageRating = reviews.length > 0 ? 
     reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length : 0;
 
-  // Current page URL for sharing
   const currentPageUrl = window.location.href;
-
-  // Calculate discount percentage if both prices are available
-  const discountPercentage = product.discount_percent && product.price && product.price > 0
-    ? Math.round(product.discount_percent)
-    : null;
+  const discountPercentage = product.discount_percent;
 
     
   return (
@@ -296,9 +434,7 @@ const ProductDetail = () => {
           <div className="flex items-center text-sm">
             <Link to="/" className="text-gray-500 hover:text-tommyfx-blue">Home</Link>
             <ChevronRight size={16} className="mx-2 text-gray-400" />
-            <Link to="/categories" className="text-gray-500 hover:text-tommyfx-blue">
-              Shop
-            </Link>
+            <Link to="/categories" className="text-gray-500 hover:text-tommyfx-blue">Shop</Link>
             <ChevronRight size={16} className="mx-2 text-gray-400" />
             <Link to={`/categories/${product.category?.toLowerCase()}`} className="text-gray-500 hover:text-tommyfx-blue">
               {product.category || 'Products'}
@@ -318,7 +454,7 @@ const ProductDetail = () => {
               <div className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden mb-4">
                 {discountPercentage && (
                   <div className="absolute top-4 left-4 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-md z-10">
-                    -{discountPercentage}%
+                    -{Math.round(discountPercentage)}%
                   </div>
                 )}
                 <img
@@ -354,25 +490,33 @@ const ProductDetail = () => {
               </span>
               <h1 className="text-3xl font-bold mt-2 mb-4">{product.name}</h1>
               
-              <div className="flex items-center mb-4">
-                <div className="flex">
-                  {[...Array(5)].map((_, i) => (
-                    <Star
-                      key={i}
-                      size={18}
-                      className={i < Math.round(averageRating) ? "fill-tommyfx-blue text-tommyfx-blue" : "text-gray-300"}
-                    />
-                  ))}
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center">
+                  <div className="flex">
+                    {[...Array(5)].map((_, i) => (
+                      <Star
+                        key={i}
+                        size={18}
+                        className={i < Math.round(averageRating) ? "fill-tommyfx-blue text-tommyfx-blue" : "text-gray-300"}
+                      />
+                    ))}
+                  </div>
+                  <span className="ml-2 text-sm text-gray-500">
+                    {reviews.length} {reviews.length === 1 ? 'review' : 'reviews'}
+                  </span>
                 </div>
-                <span className="ml-2 text-sm text-gray-500">
-                  {reviews.length} {reviews.length === 1 ? 'review' : 'reviews'}
-                </span>
+                <StockDisplay stock={product.stock || 0} />
               </div>
+
+              {/* Discount Highlight Bar */}
+              {discountPercentage && (
+                <DiscountHighlight discountPercent={discountPercentage} />
+              )}
               
-              {product.discount_percent ? (
+              {product.original_price && product.discount_percent ? (
                 <div className="mb-6">
                   <p className="text-2xl font-bold text-tommyfx-blue">{formatCurrency(product.price)}</p>
-                  <p className="text-gray-500 line-through">{formatCurrency(product.price)}</p>
+                  <p className="text-gray-500 line-through">{formatCurrency(product.original_price)}</p>
                 </div>
               ) : (
                 <p className="text-2xl font-bold mb-6">{formatCurrency(product.price)}</p>
@@ -397,18 +541,24 @@ const ProductDetail = () => {
                       onClick={incrementQuantity}
                       className="px-3 py-2 hover:bg-gray-100"
                       aria-label="Increase quantity"
+                      disabled={quantity >= product.stock}
                     >
                       <Plus size={16} />
                     </button>
                   </div>
+                  <span className="ml-3 text-sm text-gray-500">
+                    Max: {product.stock}
+                  </span>
                 </div>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Button 
                     className="btn-primary flex items-center justify-center"
                     onClick={handleAddToCart}
+                    disabled={product.stock === 0}
                   >
-                    <ShoppingCart size={18} className="mr-2" /> Add to Cart
+                    <ShoppingCart size={18} className="mr-2" /> 
+                    {product.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
                   </Button>
                   <Button 
                     variant="outline" 
@@ -550,9 +700,11 @@ const ProductDetail = () => {
                   key={prod.id}
                   id={prod.id}
                   name={prod.name}
-                  price={prod.discount_percent ?? prod.price}    // ← use prod here
+                  price={prod.discount_percent ? prod.price : prod.price}
                   image={prod.image_url || 'https://source.unsplash.com/oG8PIWBc3nE'}
                   category={prod.category}
+                  stock={prod.stock || 0} // Add this line
+
                 />
               ))}
             </div>
@@ -562,7 +714,6 @@ const ProductDetail = () => {
         </div>
       </section>
 
-      
       {/* Review Dialog */}
       <ReviewDialog 
         isOpen={reviewDialogOpen}
@@ -599,5 +750,3 @@ const ProductDetail = () => {
 };
 
 export default ProductDetail;
-
-

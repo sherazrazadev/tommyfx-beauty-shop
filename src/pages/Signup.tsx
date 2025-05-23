@@ -108,17 +108,17 @@ const Signup = () => {
                 required
               />
             </div>
-            
+                        
             <div className="mb-6">
               <label className="flex items-center">
                 <input type="checkbox" className="mr-2" required />
                 <span className="text-gray-600">
                   I agree to the{' '}
-                  <Link to="/terms" className="text-tommyfx-blue hover:underline">
+                  <Link to="/support/terms-conditions" className="text-tommyfx-blue hover:underline">
                     Terms of Service
                   </Link>{' '}
                   and{' '}
-                  <Link to="/privacy" className="text-tommyfx-blue hover:underline">
+                  <Link to="/support/privacy-policy" className="text-tommyfx-blue hover:underline">
                     Privacy Policy
                   </Link>
                 </span>

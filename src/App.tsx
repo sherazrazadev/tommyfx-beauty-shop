@@ -15,6 +15,11 @@ import Categories from '@/pages/Categories';
 import CategoryProducts from '@/pages/CategoryProducts';
 import Wishlist from '@/pages/Wishlist';
 import Newsletter from '@/pages/admin/Newsletter';
+// Add these routes to your App.tsx
+// import FAQ from '@/pages/support/FAQ';
+// import TrackOrder from '@/pages/support/TrackOrder';
+// import PrivacyPolicy from '@/pages/support/PrivacyPolicy';
+// import TermsConditions from '@/pages/support/TermsConditions';
 
 // Admin Routes
 import Dashboard from '@/pages/admin/Dashboard';
@@ -27,6 +32,10 @@ import Customers from '@/pages/admin/Customers';
 import Settings from '@/pages/admin/Settings';
 import Layout from './components/layout/Layout';
 import { WishlistProvider } from './components/wishlist/useWishlist';
+import FAQ from './pages/support/FAQ';
+import TrackOrder from './pages/support/TrackOrder';
+import PrivacyPolicy from './pages/support/PrivacyPolicy';
+import TermsConditions from './pages/support/TermsConditions';
 
 function App() {
   return (
@@ -46,7 +55,10 @@ function App() {
           <Route path="/categories" element={<Categories />} />
           <Route path="/categories/:categoryId" element={<CategoryProducts />} />
           <Route path="/category/:categoryId" element={<CategoryProducts />} />
-          
+          <Route path="/support/faq" element={<FAQ />} />
+          <Route path="/support/track-order" element={<TrackOrder />} />
+          <Route path="/support/privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="/support/terms-conditions" element={<TermsConditions />} />
           <Route path="/wishlist" element={<Wishlist />} />
           
           {/* Admin Routes */}

@@ -116,8 +116,12 @@ const Footer = () => {
                 <Facebook size={20} />
               </a>
               <a href="https://www.tiktok.com/@tommyfx.pk" target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-tommyfx-blue">
-                <Twitter size={20} />
+                {/* <Twitter size={20} /> */}
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                <path d="M19.321 5.562a5.124 5.124 0 0 1-.443-.258 6.228 6.228 0 0 1-1.137-.966c-.849-.85-1.302-1.963-1.302-3.212V.644h-3.19v14.041c0 2.547-2.067 4.614-4.614 4.614s-4.614-2.067-4.614-4.614 2.067-4.614 4.614-4.614c.254 0 .502.021.742.06v-3.233a7.832 7.832 0 0 0-.742-.036c-4.309 0-7.807 3.498-7.807 7.807s3.498 7.807 7.807 7.807 7.807-3.498 7.807-7.807V8.273c1.163.802 2.542 1.265 4.031 1.265v-3.193c-.97 0-1.878-.347-2.577-.935z"/>
+                </svg>
               </a>
+            
             </div>
           </div>
 
