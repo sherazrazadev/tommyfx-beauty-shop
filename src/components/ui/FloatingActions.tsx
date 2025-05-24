@@ -1,12 +1,12 @@
 // src/components/ui/FloatingActions.tsx - Fixed positioning and responsive
 import React from 'react';
 import ChatBot from './ChatBot';
-import WhatsAppButton from './whatsappButton';
+import WPButton from './WPButton';
 
 const FloatingActions: React.FC = () => {
   return (
     <div className="floating-actions-container">
-      <WhatsAppButton />
+      <WPButton />
       <ChatBot />
     </div>
   );
